@@ -14,15 +14,16 @@ export default function Result() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const variant: Variant = (params.get('variant') as Variant) === 'generic' ? 'generic' : session.variant
+  const childId = params.get('child') || session.childId
   const [proposal, setProposal] = useState<Proposal | null>(null)
   const [error, setError] = useState(false)
   const tracked = useRef(false)
 
   useEffect(() => {
-    if (!session.childId) return
+    if (!childId) return
     setError(false)
-    api.proposal(session.childId, variant, lang).then(setProposal, () => setError(true))
-  }, [session.childId, variant, lang])
+    api.proposal(childId, variant, lang).then(setProposal, () => setError(true))
+  }, [childId, variant, lang])
 
   useEffect(() => {
     if (!proposal || tracked.current) return
@@ -30,7 +31,7 @@ export default function Result() {
     track('result_viewed', undefined, { variant, adventure: proposal.adventure.slug })
   }, [proposal, variant, track])
 
-  if (!session.childId) return <Navigate to="/onboarding" replace />
+  if (!childId) return <Navigate to="/onboarding" replace />
 
   return (
     <Layout wide>
@@ -52,13 +53,13 @@ export default function Result() {
             <button
               className="btn primary big"
               onClick={() => {
-                update({ variant })
+                update({ variant, childId, orderId: undefined, transactionRef: undefined })
                 navigate('/checkout')
               }}
             >
               {t('r_cta', { price: formatPrice(proposal.box) })}
             </button>
-            <Link to="/parent-test" className="link">
+            <Link to={`/parent-test?child=${childId}`} className="link">
               {t('r_parent_test')}
             </Link>
           </div>

@@ -1,72 +1,85 @@
-# MyRugy Kids · Join the expedition
+# MyRugy Kids
 
-Pre-launch funnel with a personalised onboarding for My Rugy (Hack&Hire, Day 1 report).
-**Flask** API · **React + TypeScript (Vite)** · **Supabase** (PostgreSQL).
+A personalised rug-making learning platform for children, with parent accounts, and the Day 1 pre-launch funnel.
+**Flask** API · **React + TypeScript (Vite)** · **Supabase** (PostgreSQL) · **Google Gemini** (server-side only).
+
+Architecture, schema, endpoints and middleware: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ```
-Landing ─► Step 0 grown-up + consent ─► 1 name/avatar ─► 2 age ─► 3 islands ─► 4 mini-challenges ─► 5 language
-        ─► Personalised (or generic) adventure ─► Simulated Payzone checkout ─► Confirmed
-Parent test (blind A/B relevance rating) · Team dashboard (funnel + D1.2 thresholds)
+Landing → parent account (consent) → name+buddy → age → islands → world+colour → learning+rug style → mini-challenges → language
+        → /play/:childId  personalised world: Home · Learn (8 stages) · Games · Create My Rug · Rewards · Progress · Ask the guide
+Parent:   /parent  children cards → progress detail (lessons, games, achievements, rugs, assistant chats) · edit · delete · add child
+Funnel:   /adventure (personalised vs generic Box) → Payzone demo → /confirmed · /parent-test · /dashboard
 ```
 
-## Run it locally
+## Run locally
 
-**1. Backend** (from `backend/`)
+Backend (`backend/`):
 
 ```bash
 python -m venv .venv
-.venv\Scripts\activate          # macOS/Linux: source .venv/bin/activate
+.venv\Scripts\activate
 pip install -r requirements.txt
-copy .env.example .env          # leave Supabase keys empty to use the in-memory demo store
-python app.py                   # http://127.0.0.1:5000
+copy .env.example .env
+python app.py
 ```
 
-**2. Frontend** (from `frontend/`)
+Frontend (from the project root or `frontend/`):
 
 ```bash
-npm install
-npm run dev                     # http://localhost:5173  (proxies /api to Flask)
+npm install --prefix frontend
+npm run dev
 ```
 
-## Connect Supabase
+Open http://localhost:5173. Tests: `cd backend && python -m pytest -q`.
 
-1. Create a project and open **SQL Editor**, then run [`supabase/schema.sql`](supabase/schema.sql).
-2. In `backend/.env`, set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (from Project Settings → API).
-3. Load the demo content: `python seed.py` (adventures, missions, Box items; safe to re-run).
-4. Restart Flask. `GET /api/health` and the dashboard badge now show `storage: supabase`.
+## Configuration (`backend/.env`, never committed)
 
-RLS is on for every table with no policies, so only the Flask backend (service role) can read or write.
-The service-role key must never go in the React app.
-
-## Pages
-
-| Route | What it does |
+| Variable | Purpose |
 |---|---|
-| `/` | Landing page with one conversion action. `?variant=generic` puts the session in the control group |
-| `/onboarding` | Steps 0–5. Consent is written before any child data is stored |
-| `/adventure` | Result screen: the adventure, first mission and Box change with the profile |
-| `/checkout` → `/confirmed` | Simulated Payzone payment, clearly labelled as a demo. `mk_orders` goes from pending to confirmed |
-| `/parent-test` | The parent rates the personalised and generic screens 1–5, in random order, with no labels |
-| `/dashboard` | Distinct sessions per funnel step, drop-off, completion rate and relevance gap compared with the targets |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Supabase storage. Leave empty (or set `STORAGE=memory`) to use the in-memory store |
+| `MEMORY_DB_PATH` | In-memory mode: saves accounts and progress to a JSON file |
+| `JWT_SECRET` | ≥ 32 characters. **Required** when `APP_ENV=production` |
+| `COOKIE_SECURE` | `true` behind HTTPS |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | AI tutor. Without a key, a built-in offline helper answers from the lesson hints |
+| `POINTS_CONFIG`, `POINTS_PER_LEVEL`, `RUG_POINTS_DAILY_CAP` | Configurable points values |
 
-## How personalisation works (`backend/recommend.py`)
+## Supabase
 
-| Profile field | Drives |
+1. In the SQL Editor, run [`supabase/schema.sql`](supabase/schema.sql). It is safe to re-run and upgrades a v1 database.
+2. Set the keys in `backend/.env`, then load the content (adventures, lessons, questions, games, rewards, achievements):
+   ```bash
+   python seed.py
+   ```
+3. Restart Flask. The dashboard shows `storage: supabase`.
+
+Row-level security is on for every table with no policies, so only the backend's secret key can read or write.
+
+## Security
+
+- **Passwords** are hashed with scrypt. **JWT** (HS256, 12 h) sits in an `httpOnly`, `SameSite=Strict` cookie that JavaScript can't read. Logout revokes the token's id.
+- **Guards** run in this order on every private route: `authenticate_parent → authorize_parent → verify_child_ownership`. A child that isn't yours returns **404**, and `parentId` is never read from the request.
+- **CSRF**: cookie-authenticated requests that change data must send `X-Requested-With`.
+- **Rate limits** apply to login, register and chat (per IP and per child).
+- **Validation**: every input is validated against a whitelist and sanitised.
+- **Server-side checks**: quiz answers never reach the browser, and game results and points are checked on the server.
+- **Gemini** is called only by the backend. The child's name is never sent, emails and phone numbers are removed, strict safety settings apply, quiz mode gives hints rather than answers, and parents can read every conversation.
+
+## Personalisation
+
+`GET /api/children/:id/experience` turns the stored profile into the interface:
+
+| Choice | Changes |
 |---|---|
-| `interests[]` | The adventure theme (tag overlap; ties go to the first island picked) and 2 Box items |
-| `age_band` | Mission format (3–5 read-along, 6–8 puzzle quests, 9–11 design studio), mission choice and Box items |
-| `level` (from the mini-challenges) | First mission difficulty |
-| `language` | Language of the result screen and Box contents (EN / FR / AR, RTL supported) |
-| `name`, `avatar_key` | Explorer card and name card in the Box |
+| World (space, ocean, dinosaurs, jungle, desert, fairy tale; magic carpet unlocks at 750) | Colours, background animation, guide character, nav icons, points vocabulary, examples in lessons and games, stickers |
+| Favourite colour | Accent colour and the first colour of every palette |
+| Age + measured difficulty | Explanation depth (3 reading levels), quiz length, game size (pairs, steps, pattern length), timer speed |
+| Learning style | Section order in lessons (story first, explanation first with read-aloud, or tap cards first) |
+| Rug style | Shapes and colours in Build the Pattern and the Rug Studio, design tips |
+| Buddy, interests, language | Avatar and stickers, the funnel adventure and Box, and the assistant's reply language |
 
-The **generic** control uses the same layout and price, with the `is_generic` adventure, a mid-level 6–8 mission and neutral Box items.
+## Not done yet
 
-## API
-
-`POST /api/events` · `POST /api/parents` · `POST /api/children` · `PATCH /api/children/:id` ·
-`GET /api/children/:id/proposal?variant=personalised|generic&lang=` · `POST /api/orders` ·
-`POST /api/orders/:id/pay` · `POST /api/ratings` · `GET /api/dashboard` · `GET /api/health`
-
-## To confirm with My Rugy
-
-Age bands (3–5 / 6–8 / 9–11), the definition of level, supported languages, Box contents and price (299 MAD is a placeholder), the thresholds (+1 point, 70%), and whether a phone number is needed. All the demo content lives in `backend/content.py`.
+- Lesson and game text is English only. The onboarding and funnel are EN/FR/AR, and the assistant answers in the child's language.
+- Lesson "videos" are narrated animated storyboards. Set `mk_lessons.video_url` to play real videos.
+- Rate limits are counted per server process (revoked tokens are stored in the database). Use Redis if you run several instances.

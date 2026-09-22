@@ -18,7 +18,7 @@ export default function Landing() {
     track('landing_viewed', undefined, { variant: session.variant })
   }, [track, session.variant])
 
-  const inProgress = !!session.parentId && !session.orderId
+  const inProgress = !!session.childId && session.step > 0 && !session.orderId
 
   const start = () => {
     // A finished expedition starts a new session; an unfinished one resumes.

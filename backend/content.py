@@ -10,7 +10,8 @@ NS = uuid.UUID("6f1c2a7e-3b8d-4c1e-9a55-2d6f0b7e9c10")
 AGE_BANDS = ("3-5", "6-8", "9-11")
 LANGUAGES = ("en", "fr", "ar")
 INTERESTS = ("animals", "nature", "art", "space", "music", "stories")
-AVATARS = ("fox", "camel", "owl", "turtle", "lion", "monkey")
+# The avatar is the child's travel buddy (favourite animal) across the whole app.
+AVATARS = ("fox", "camel", "owl", "turtle", "lion", "monkey", "dino", "dolphin", "cat", "unicorn")
 BOX_PRICE = 299.00
 CURRENCY = "MAD"
 

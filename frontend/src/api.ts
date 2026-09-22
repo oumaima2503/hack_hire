@@ -2,14 +2,26 @@ export type Lang = 'en' | 'fr' | 'ar'
 export type Variant = 'personalised' | 'generic'
 export type AgeBand = '3-5' | '6-8' | '9-11'
 
+export interface Parent {
+  id: string
+  name: string
+  email: string
+}
+
 export interface Child {
   id: string
   name: string
   avatar_key: string | null
+  age: number | null
   age_band: AgeBand | null
   level: 1 | 2 | 3 | null
   interests: string[]
   language: Lang | null
+  selected_theme: string | null
+  favorite_color: string | null
+  learning_style: 'watch' | 'listen' | 'do' | null
+  rug_style: string | null
+  total_points: number
 }
 
 export interface Proposal {
@@ -34,25 +46,263 @@ export interface Order {
   variant: Variant
 }
 
+// ───────── Learning ─────────
+
+export interface Theme {
+  key: string
+  name: string
+  emoji: string
+  guide: { name: string; emoji: string }
+  colors: { bg1: string; bg2: string; surface: string; text: string; secondary: string; primary: string; on_primary: string }
+  particles: string[]
+  animation: string
+  icons: Record<'home' | 'learn' | 'games' | 'studio' | 'rewards' | 'progress' | 'assistant', string>
+  vocab: { points: string; point_emoji: string; level: string; friend: string; thing: string; place: string; collect: string; cheer: string }
+  motifs: string[]
+}
+
+export interface Stats {
+  total_points: number
+  xp_level: number
+  points_to_next: number
+  points_per_level: number
+  lessons_completed: number
+  lessons_total: number
+  games_completed: number
+  correct_answers: number
+  answers_total: number
+  answers_correct: number
+  rugs_created: number
+  challenge_passed: number
+  streak_days: number
+  items_unlocked: number
+  achievements: number
+}
+
+export interface LessonSummary {
+  key: string
+  position: number
+  title: string
+  emoji: string
+  summary: string
+  status: 'new' | 'started' | 'completed'
+  unlocked: boolean
+  video_watched: boolean
+  game: string | null
+}
+
+export interface Experience {
+  child: Child
+  theme: Theme
+  rug_style: { key: string; name: string; emoji: string; shapes: string[]; colors: string[] }
+  learning_style: { key: string; label: string; emoji: string; order: string[] }
+  difficulty: { level: number; label: string; reading_level: number; speed_seconds: number | null }
+  progress: Stats
+  next_lesson: LessonSummary | null
+  available_themes: { key: string; name: string; emoji: string }[]
+}
+
+export interface Lesson {
+  key: string
+  position: number
+  title: string
+  emoji: string
+  summary: string
+  reading_level: number
+  learning_style: string
+  sections: ('video' | 'explain' | 'cards' | 'quiz')[]
+  explain: string[]
+  analogy: string
+  storyboard: { emoji: string; caption: string }[]
+  cards: { emoji: string; title: string; text: string }[]
+  video_url: string | null
+  game: { key: string; title: string; emoji: string } | null
+  status: string
+  video_watched: boolean
+  has_quiz: boolean
+}
+
+export interface Question {
+  id: string
+  prompt: string
+  options: string[]
+}
+
+export interface Reward {
+  key: string
+  kind: 'color' | 'pattern' | 'character' | 'design' | 'theme' | 'workshop'
+  name: string
+  emoji: string
+  threshold: number
+  payload: Record<string, unknown>
+}
+
+export interface Achievement {
+  key: string
+  title: string
+  description: string
+  emoji: string
+}
+
+export interface Award {
+  points_awarded: number
+  breakdown: { reason: string; points: number }[]
+  total_points: number
+  xp_level: number
+  points_to_next: number
+  new_rewards: Reward[]
+  new_achievements: Achievement[]
+}
+
+export interface AnswerResult {
+  correct: boolean
+  explanation: string | null
+  hint: string | null
+  correct_answer: string | null
+  award: Award | null
+}
+
+export interface GameSummary {
+  key: string
+  type: string
+  title: string
+  emoji: string
+  lesson: { key: string; title: string }
+  unlocked: boolean
+  completed: boolean
+  plays: number
+  best_score: number
+  max_score: number
+}
+
+export interface Studio {
+  rows: number
+  cols: number
+  workshop: boolean
+  palette: string[]
+  motifs: string[]
+  stamps: { key: string; name: string; emoji: string; mask: number[][] }[]
+  templates: string[]
+  textures: string[]
+  shapes: string[]
+}
+
+export interface PatternCell {
+  color: string
+  shape: string
+}
+
+export interface GameConfig {
+  key: string
+  type: 'choose_material' | 'match_tools' | 'build_pattern' | 'order_steps' | 'create_rug' | 'challenge'
+  title: string
+  emoji: string
+  intro: string
+  difficulty: number
+  speed_seconds: number | null
+  guide: { name: string; emoji: string }
+  reward_emoji: string
+  motifs: string[]
+  questions?: Question[]
+  tools?: { tool: string; emoji: string }[]
+  purposes?: string[]
+  pairs?: Record<string, string>
+  seed?: number
+  palette?: string[]
+  shapes?: string[]
+  target?: PatternCell[]
+  steps?: { id: string; emoji: string; label: string }[]
+  studio?: Studio
+  pass_ratio?: number
+}
+
+export interface GameResult {
+  passed: boolean
+  score: number
+  max_score: number
+  correct_positions?: boolean[]
+  award: Award | null
+}
+
+export interface RugDesign {
+  rows: number
+  cols: number
+  cells: (string | null)[]
+  motifs: { i: number; e: string }[]
+  texture: string
+}
+
+export interface Rug {
+  id: string
+  name: string
+  design: RugDesign
+  created_at: string
+}
+
+export interface RewardsOverview {
+  total_points: number
+  rewards: (Reward & { unlocked: boolean; unlocked_at: string | null })[]
+  next_reward: (Reward & { unlocked: boolean }) | null
+  achievements: (Achievement & { earned: boolean; earned_at: string | null })[]
+}
+
+export interface ProgressSummary {
+  stats: Stats
+  quiz_accuracy: number | null
+  lessons: (LessonSummary & { quiz_correct: number; quiz_total: number })[]
+  games: { key: string; title: string; emoji: string; plays: number; best_score: number; max_score: number; completed: boolean }[]
+  recent_points: { reason: string; points: number; created_at: string }[]
+}
+
+export interface ChildCard extends Child {
+  theme: { key: string; name: string; emoji: string; primary: string }
+  stats: Stats
+  achievements: Achievement[]
+  latest_rug: Rug | null
+  last_active: string | null
+}
+
+export interface ChildDetail extends ChildCard {
+  progress: ProgressSummary
+  rewards: RewardsOverview
+  rugs: Rug[]
+  chat: { role: 'user' | 'assistant'; content: string; created_at: string }[]
+}
+
+export interface ChatReply {
+  reply: string
+  source: 'gemini' | 'offline' | 'filtered'
+  guide: { name: string; emoji: string }
+}
+
+// ───────── Transport ─────────
+
+export class ApiError extends Error {
+  constructor(message: string, public status: number) {
+    super(message)
+  }
+}
+
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch(`/api${path}`, {
     method,
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
+    credentials: 'same-origin', // httpOnly session cookie; the token is never readable by JS
+    headers: { 'X-Requested-With': 'fetch', ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
   })
+  if (res.status === 204) return undefined as T
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`)
+  if (!res.ok) throw new ApiError(data.error || `Request failed (${res.status})`, res.status)
   return data as T
 }
 
+const c = (id: string) => `/children/${id}`
+
 export const api = {
+  // funnel
   event: (b: { session_id: string; event_name: string; step?: number; child_id?: string; metadata?: object }) =>
     call('POST', '/events', b),
-  createParent: (email: string, consent: boolean) => call<{ id: string }>('POST', '/parents', { email, consent }),
-  createChild: (b: { parent_id: string; name: string; avatar_key: string }) => call<Child>('POST', '/children', b),
-  updateChild: (id: string, patch: Partial<Child>) => call<Child>('PATCH', `/children/${id}`, patch),
-  proposal: (id: string, variant: Variant, lang: Lang) =>
-    call<Proposal>('GET', `/children/${id}/proposal?variant=${variant}&lang=${lang}`),
+  proposal: (id: string, variant: Variant, lang: Lang) => call<Proposal>('GET', `${c(id)}/proposal?variant=${variant}&lang=${lang}`),
   createOrder: (b: {
     child_id: string
     variant: Variant
@@ -63,6 +313,47 @@ export const api = {
   rate: (child_id: string, ratings: { variant_shown: Variant; shown_order: 1 | 2; score: number }[]) =>
     call('POST', '/ratings', { child_id, ratings }),
   dashboard: () => call<Dashboard>('GET', '/dashboard'),
+
+  // auth
+  register: (b: { name: string; email: string; password: string; consent: boolean }) =>
+    call<{ parent: Parent; children: Child[] }>('POST', '/auth/register', b),
+  login: (email: string, password: string) => call<{ parent: Parent; children: Child[] }>('POST', '/auth/login', { email, password }),
+  me: () => call<{ parent: Parent; children: Child[] }>('GET', '/auth/me'),
+  logout: () => call('POST', '/auth/logout'),
+
+  // parent
+  parentDashboard: () => call<{ parent: Parent; children: ChildCard[] }>('GET', '/parents/dashboard'),
+  createChild: (b: { name: string; avatar_key: string }) => call<Child>('POST', '/parents/children', b),
+  childDetail: (id: string) => call<ChildDetail>('GET', `/parents/children/${id}`),
+  editChild: (id: string, patch: Partial<Child>) => call<Child>('PUT', `/parents/children/${id}`, patch),
+  deleteChild: (id: string) => call<void>('DELETE', `/parents/children/${id}`),
+
+  // child (onboarding + learning)
+  updateChild: (id: string, patch: Partial<Child>) => call<Child>('PATCH', c(id), patch),
+  experience: (id: string) => call<Experience>('GET', `${c(id)}/experience`),
+  lessons: (id: string) => call<LessonSummary[]>('GET', `${c(id)}/lessons`),
+  lesson: (id: string, key: string) => call<Lesson>('GET', `${c(id)}/lessons/${key}`),
+  quiz: (id: string, key: string) => call<Question[]>('GET', `${c(id)}/lessons/${key}/quiz`),
+  videoWatched: (id: string, key: string) => call<{ award: Award | null }>('POST', `${c(id)}/lessons/${key}/video-watched`),
+  completeLesson: (id: string, key: string) =>
+    call<{ award: Award | null; next_lesson: LessonSummary | null }>('POST', `${c(id)}/lessons/${key}/complete`),
+  answer: (id: string, qid: string, choice: string) => call<AnswerResult>('POST', `${c(id)}/questions/${qid}/answer`, { choice }),
+  games: (id: string) => call<GameSummary[]>('GET', `${c(id)}/games`),
+  game: (id: string, key: string) => call<GameConfig>('GET', `${c(id)}/games/${key}`),
+  completeGame: (id: string, key: string, payload: object) => call<GameResult>('POST', `${c(id)}/games/${key}/complete`, payload),
+  rugs: (id: string) => call<Rug[]>('GET', `${c(id)}/rugs`),
+  saveRug: (id: string, name: string, design: RugDesign) => call<{ rug: Rug; award: Award | null }>('POST', `${c(id)}/rugs`, { name, design }),
+  rewards: (id: string) => call<RewardsOverview>('GET', `${c(id)}/rewards`),
+  progress: (id: string) => call<ProgressSummary>('GET', `${c(id)}/progress`),
+
+  // assistant
+  chat: (b: { childId: string; message: string; lessonId?: string; gameKey?: string; questionId?: string }) =>
+    call<ChatReply>('POST', '/chat', b),
+  chatHistory: (childId: string, lessonId?: string) =>
+    call<{ role: 'user' | 'assistant'; content: string }[]>(
+      'GET',
+      `/chat/history?childId=${encodeURIComponent(childId)}${lessonId ? `&lessonId=${encodeURIComponent(lessonId)}` : ''}`,
+    ),
 }
 
 export interface Dashboard {

@@ -26,14 +26,15 @@ export default function Confirmed() {
           <ExplorerCard profile={session.profile} />
         </div>
         <div className="result-cta">
-          <Link to="/parent-test" className="btn ghost">
+          <Link to={`/parent-test?child=${session.childId}`} className="btn ghost">
             {t('r_parent_test')}
           </Link>
           <button
             className="btn primary"
             onClick={() => {
+              const childId = session.childId
               reset()
-              navigate('/')
+              navigate(childId ? `/play/${childId}` : '/')
             }}
           >
             {t('k_again')}

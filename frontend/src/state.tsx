@@ -9,13 +9,16 @@ export interface Profile {
   interests?: string[]
   level?: 1 | 2 | 3
   language?: Lang
+  selected_theme?: string
+  favorite_color?: string
+  learning_style?: 'watch' | 'listen' | 'do'
+  rug_style?: string
 }
 
 export interface Session {
   sessionId: string
   variant: Variant
   step: number
-  parentId?: string
   childId?: string
   profile: Profile
   orderId?: string

@@ -1,4 +1,4 @@
-import { avatarEmoji, island } from '../content'
+import { FAVORITE_COLORS, WORLDS, avatarEmoji, island } from '../content'
 import { LANG_FLAGS, LANG_NAMES, useI18n, type I18nKey } from '../i18n'
 import type { Profile } from '../state'
 
@@ -7,11 +7,14 @@ export function ExplorerCard({ profile, highlight }: { profile: Profile; highlig
   const { t } = useI18n()
   const slot = (n: number, filled: boolean) => `card-slot${filled ? ' filled' : ''}${highlight === n ? ' pulse' : ''}`
 
+  const world = WORLDS.find((w) => w.key === profile.selected_theme)
+  const color = FAVORITE_COLORS.find((c) => c.key === profile.favorite_color)
+
   return (
-    <div className="explorer-card">
+    <div className="explorer-card" style={color ? { borderColor: color.hex } : undefined}>
       <div className="explorer-card-head">
         <span>🧭 {t('card_title')}</span>
-        <span className="stamp">MA</span>
+        <span className="stamp">{world ? world.emoji : 'MA'}</span>
       </div>
       <div className="explorer-card-body">
         <div className={`avatar-big ${slot(1, !!profile.avatar_key)}`}>{avatarEmoji(profile.avatar_key)}</div>
@@ -35,11 +38,11 @@ export function ExplorerCard({ profile, highlight }: { profile: Profile; highlig
               : '?'}
           </dd>
         </div>
-        <div className={slot(4, !!profile.level)}>
+        <div className={slot(6, !!profile.level)}>
           <dt>{t('card_level')}</dt>
           <dd>{profile.level ? `${'★'.repeat(profile.level)}${'☆'.repeat(3 - profile.level)} ${t(`level_${profile.level}` as I18nKey)}` : '?'}</dd>
         </div>
-        <div className={slot(5, !!profile.language)}>
+        <div className={slot(7, !!profile.language)}>
           <dt>{t('card_language')}</dt>
           <dd>{profile.language ? `${LANG_FLAGS[profile.language]} ${LANG_NAMES[profile.language]}` : '?'}</dd>
         </div>

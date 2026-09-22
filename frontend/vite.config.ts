@@ -5,6 +5,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    proxy: { '/api': 'http://127.0.0.1:5000' },
+    // Same-origin proxy: the httpOnly session cookie and /api live on one origin.
+    proxy: { '/api': `http://127.0.0.1:${process.env.API_PORT || 5000}` },
   },
 })

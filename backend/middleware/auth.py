@@ -1,0 +1,113 @@
+"""Request guards, applied in this order on private routes:
+
+    @authenticate_parent      → valid, non-revoked JWT; loads g.parent
+    @authorize_parent         → role 'parent' + consent on record
+    @verify_child_ownership   → g.child, only if child.parent_id == g.parent.id
+
+The parent id always comes from the verified token, never from the request body.
+"""
+from functools import wraps
+
+import jwt
+from flask import g, request
+
+import config
+from middleware import get_repo
+from services.auth_service import decode_token
+from validators import ApiError, is_uuid
+
+MUTATING = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+def token_from_request():
+    header = request.headers.get("Authorization", "")
+    if header.startswith("Bearer "):
+        return header[7:].strip(), "header"
+    return request.cookies.get(config.AUTH_COOKIE), "cookie"
+
+
+def csrf_guard():
+    """before_request hook. A cookie is sent by the browser automatically, so for
+    cookie-authenticated writes we also require a custom header, which a cross-site
+    form cannot set (and a cross-site fetch would need a CORS preflight we refuse)."""
+    if request.method in MUTATING and request.cookies.get(config.AUTH_COOKIE) \
+            and not request.headers.get("Authorization") \
+            and request.headers.get("X-Requested-With") != "fetch":
+        raise ApiError("Missing X-Requested-With header", 403)
+
+
+def optional_parent():
+    """The logged-in parent if the request carries a valid session, else None (never raises)."""
+    token, _ = token_from_request()
+    if not token:
+        return None
+    try:
+        claims = decode_token(token)
+    except jwt.InvalidTokenError:
+        return None
+    repo = get_repo()
+    if repo.select("mk_revoked_tokens", jti=claims["jti"]) or not is_uuid(claims["sub"]):
+        return None
+    return repo.get("mk_parents", claims["sub"])
+
+
+def authenticate_parent(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        token, _ = token_from_request()
+        if not token:
+            raise ApiError("Please log in", 401)
+        try:
+            claims = decode_token(token)
+        except jwt.InvalidTokenError:
+            raise ApiError("Your session has expired, please log in again", 401)
+        repo = get_repo()
+        if repo.select("mk_revoked_tokens", jti=claims["jti"]):
+            raise ApiError("Your session has ended, please log in again", 401)
+        parent = repo.get("mk_parents", claims["sub"]) if is_uuid(claims["sub"]) else None
+        if not parent or not parent.get("password_hash"):
+            raise ApiError("Please log in", 401)
+        g.parent, g.claims = parent, claims
+        return fn(*args, **kwargs)
+    return wrapper
+
+
+def authorize_parent(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if g.claims.get("role") != "parent" or not g.parent.get("consent_given"):
+            raise ApiError("Not allowed", 403)
+        return fn(*args, **kwargs)
+    return wrapper
+
+
+def _requested_child_id(kwargs):
+    if kwargs.get("child_id"):
+        return kwargs["child_id"]
+    if request.args.get("childId"):
+        return request.args["childId"]
+    body = request.get_json(silent=True) or {}
+    return body.get("childId") or body.get("child_id")
+
+
+def verify_child_ownership(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        child_id = _requested_child_id(kwargs)
+        child = get_repo().get("mk_children", child_id) if is_uuid(child_id) else None
+        # 404 (not 403) so another family's child ids can't even be confirmed to exist.
+        if not child or child["parent_id"] != g.parent["id"]:
+            raise ApiError("Child not found", 404)
+        g.child = child
+        return fn(*args, **kwargs)
+    return wrapper
+
+
+def parent_route(fn):
+    """authenticate_parent + authorize_parent."""
+    return authenticate_parent(authorize_parent(fn))
+
+
+def child_route(fn):
+    """authenticate_parent + authorize_parent + verify_child_ownership."""
+    return authenticate_parent(authorize_parent(verify_child_ownership(fn)))
