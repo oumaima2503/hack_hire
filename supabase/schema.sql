@@ -295,3 +295,27 @@ alter table mk_created_rugs        enable row level security;
 alter table mk_chat_sessions       enable row level security;
 alter table mk_chat_messages       enable row level security;
 alter table mk_revoked_tokens      enable row level security;
+
+-- ═══════════════════════════════════════════════════════════════════
+-- v3 · Moroccan regional journey (idempotent)
+-- ═══════════════════════════════════════════════════════════════════
+create table if not exists mk_regions (
+  id          uuid primary key default gen_random_uuid(),
+  key         text unique not null,
+  position    smallint not null,             -- north → south travel order
+  name        text not null,
+  short_name  text,
+  emoji       text,
+  content     jsonb not null default '{}'::jsonb   -- style, city, palette, map x/y, text per lesson topic
+);
+
+-- The child's home region: the regional journey starts there (null = Marrakech-Safi).
+alter table mk_children add column if not exists home_region text;
+
+-- Region quiz questions belong to a region instead of a fixed lesson.
+alter table mk_questions add column if not exists region_key text;
+alter table mk_questions alter column lesson_id drop not null;
+alter table mk_questions drop constraint if exists mk_questions_kind_check;
+alter table mk_questions add constraint mk_questions_kind_check check (kind in ('quiz', 'material', 'region'));
+
+alter table mk_regions enable row level security;

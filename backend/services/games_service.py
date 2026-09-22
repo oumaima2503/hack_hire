@@ -8,7 +8,7 @@ import random
 import config
 from middleware import get_repo
 from repository import now_iso
-from services import learning_service as ls
+from services import learning_service as ls, regions_service as rs
 from validators import clean_text, require
 
 ROUNDS = {1: 3, 2: 4, 3: 5}
@@ -54,11 +54,13 @@ def studio_options(child):
     by_kind = lambda kind: [r for r in rewards if r["kind"] == kind]  # noqa: E731
     theme = ls.theme_for(child)
     workshop = bool(by_kind("workshop"))
+    visited = rs.visited_regions(child)
     rows, cols = by_kind("workshop")[0]["payload"]["grid"] if workshop else GRID[ls.difficulty(child)]
     return {
         "rows": rows, "cols": cols, "workshop": workshop,
-        "palette": ls.child_palette(child, [r["payload"]["hex"] for r in by_kind("color")]),
-        "motifs": list(dict.fromkeys(theme["motifs"] + [r["payload"]["motif"] for r in by_kind("character")])),
+        # Unlocked colours, plus the signature colours and emblems of every region visited so far.
+        "palette": ls.child_palette(child, [r["payload"]["hex"] for r in by_kind("color")] + [c for reg in visited for c in reg["palette"]]),
+        "motifs": list(dict.fromkeys(theme["motifs"] + [r["payload"]["motif"] for r in by_kind("character")] + [reg["emoji"] for reg in visited])),
         "stamps": BASIC_STAMPS + [{"key": r["key"], "name": r["name"], "emoji": r["emoji"], "mask": r["payload"]["stamp"]}
                                   for r in by_kind("pattern")],
         "templates": [r["payload"]["template"] for r in by_kind("design")],
@@ -138,7 +140,9 @@ def game_config(child, key):
     # challenge: questions from every lesson the child has opened
     unlocked = ls.unlocked_lesson_ids(child["id"])
     level = ls.reading_level(child)
+    regions = rs.unlocked_region_keys(child)
     pool = [q for q in repo.select("mk_questions", kind="quiz") if q["lesson_id"] in unlocked and q["difficulty"] <= level]
+    pool += [q for q in repo.select("mk_questions", kind="region") if q.get("region_key") in regions]
     picked = random.sample(pool, min(CHALLENGE_SIZE[d], len(pool)))
     return {**base, "intro": f"{v['cheer']}! Answer questions from every lesson to win the trophy.",
             "questions": [ls.public_question(q) for q in picked], "pass_ratio": game["config"].get("pass_ratio", 0.6)}
@@ -146,12 +150,12 @@ def game_config(child, key):
 
 # ───────────────────────── Completion (server-side check) ─────────────────────────
 
-def _score_answers(answers, kind):
+def _score_answers(answers, kinds):
     require(isinstance(answers, dict) and 1 <= len(answers) <= 12, "Answers required")
     repo, score = get_repo(), 0
     for qid, choice in answers.items():
         q = repo.get("mk_questions", qid) if len(str(qid)) == 36 else None
-        require(q is not None and q["kind"] == kind, "Unknown question")
+        require(q is not None and q["kind"] in kinds, "Unknown question")
         score += int(str(choice) == q["answer"])
     return score, len(answers)
 
@@ -164,10 +168,10 @@ def complete_game(child, key, payload):
     extra = {}
 
     if game["type"] == "choose_material":
-        score, max_score = _score_answers(payload.get("answers"), "material")
+        score, max_score = _score_answers(payload.get("answers"), ("material",))
         passed = score * 2 >= max_score
     elif game["type"] == "challenge":
-        score, max_score = _score_answers(payload.get("answers"), "quiz")
+        score, max_score = _score_answers(payload.get("answers"), ("quiz", "region"))
         passed = max_score >= 3 and score >= max_score * game["config"].get("pass_ratio", 0.6)
     elif game["type"] == "match_tools":
         pairs = {p["tool"]: p["purpose"] for p in game["config"]["pairs"]}

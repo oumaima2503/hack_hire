@@ -458,7 +458,198 @@ ACHIEVEMENTS = [
     ("master_weaver", "Master Weaver", "Complete all 8 lessons", "👑", {"type": "lessons_completed", "count": 8}),
     ("streak_3", "On Fire", "Learn 3 days in a row", "🔥", {"type": "streak_days", "count": 3}),
     ("treasure_500", "Treasure Hunter", "Earn 500 points", "💎", {"type": "total_points", "count": 500}),
+    ("region_hopper", "Region Hopper", "Visit 6 regions of Morocco", "🧭", {"type": "regions_visited", "count": 6}),
+    ("all_morocco", "Explorer of Morocco", "Visit all 12 regions of Morocco", "🗺️", {"type": "regions_visited", "count": 12}),
 ]
+
+
+# ───────────────────────── Moroccan regions ─────────────────────────
+# The 12 administrative regions, in a north→south travel order. The learning path
+# visits all of them: the journey starts in the child's home region, and each of
+# the 8 lessons is hosted by 1-2 regions (see LESSON_REGION_COUNTS).
+# Each region has one text per lesson topic (REGION_TOPIC) so the regional stop
+# always matches what the lesson teaches.
+
+REGION_ORDER = (
+    "tanger_tetouan_al_hoceima", "oriental", "fes_meknes", "rabat_sale_kenitra", "casablanca_settat",
+    "beni_mellal_khenifra", "marrakech_safi", "draa_tafilalet", "souss_massa", "guelmim_oued_noun",
+    "laayoune_sakia_el_hamra", "dakhla_oued_ed_dahab",
+)
+DEFAULT_START_REGION = "marrakech_safi"
+LESSON_REGION_COUNTS = (1, 2, 1, 2, 1, 2, 1, 2)  # 12 regions over the 8 lessons, home region first
+REGION_TOPIC = {"discover": "intro", "materials": "materials", "tools": "technique", "design": "motifs",
+                "weaving": "technique", "create": "colours", "challenges": "fact", "unlock": "motifs"}
+
+REGIONS = {
+    "tanger_tetouan_al_hoceima": {
+        "name": "Tanger-Tétouan-Al Hoceïma", "short": "Tangier & the Rif", "emoji": "🏔️", "city": "Chefchaouen",
+        "x": 71, "y": 8, "palette": ["#2f6fb3", "#d7263d"], "style": "Rif stripes & the mendil",
+        "description": 'The northern tip of Morocco, where the Mediterranean meets the Atlantic. It has the green Rif mountains, the port cities of Tangier and Tétouan, and blue-painted Chefchaouen.',
+        "theme": {'look': 'Bold horizontal stripes of red and white, sometimes with thin bands of blue or black, woven flat and tight.', 'story': "The striped mendil is part of Jbala women's traditional clothing: they wear it around the waist or over the shoulders, with a wide straw hat.", 'tags': ['Flatweave', 'Stripes', 'Red & white'], 'pattern': 'stripes', 'colors': ['#d7263d', '#f7f3ea', '#2f6fb3', '#1b1b1b']},
+        "intro": "In the green Rif mountains of the north, Jbala and Rifi families weave striped cloths and blankets.",
+        "materials": "Northern weavers use soft sheep's wool and cotton, perfect for the rainy mountain winters.",
+        "technique": "Many northern pieces are flat-woven: the weft threads make neat stripes, no knots needed!",
+        "motifs": "The famous mendil is a red-and-white striped cloth worn by Jbala women. Stripes are the star here!",
+        "colours": "Red and white stripes, and the famous blue walls of Chefchaouen.",
+        "fact": "Chefchaouen is called the Blue Pearl because its streets are painted blue!",
+        "quiz": ("What pattern is the northern mendil cloth famous for?", ["Red and white stripes", "Polka dots", "Pictures of cars"],
+                 "Look at the lines going across!", "The mendil has red and white stripes."),
+    },
+    "oriental": {
+        "name": "L'Oriental", "short": "Oujda & the East", "emoji": "🌴", "city": "Oujda",
+        "x": 89, "y": 11, "palette": ["#8c2f39", "#e0a458"], "style": "Beni Snassen flatweaves",
+        "description": 'The eastern region, from the Mediterranean beaches of Saïdia down to the oasis of Figuig, with high plateaus, mountains and wide open steppes.',
+        "theme": {'look': 'Long bands of pattern filled with rows of small triangles, zigzags and lozenges, woven flat.', 'story': 'Each band is like a new chapter of the rug, a bit like the rows of a field or the tracks of a caravan.', 'tags': ['Flatweave', 'Bands', 'Triangles'], 'pattern': 'bands', 'colors': ['#8c2f39', '#e0a458', '#f3e3c3', '#3b2a20']},
+        "intro": "In the east, near Oujda and the Beni Snassen mountains, weavers make bold flat-woven blankets.",
+        "materials": "Wool from the sheep of the high plateaus is spun by hand into strong yarn.",
+        "technique": "Flatweaving: coloured weft threads pass over and under the warp to build bands of pattern.",
+        "motifs": "Wide bands full of small triangles and zigzags march across the rug.",
+        "colours": "Deep reds and warm sandy yellows, like the eastern plateaus at sunset.",
+        "fact": "Figuig, in the Oriental, is an oasis town with thousands of palm trees!",
+        "quiz": ("How are Beni Snassen blankets mostly made?", ["By flatweaving bands", "By printing on paper", "By knitting socks"],
+                 "Think of threads going over and under.", "They are flat-woven, band by band."),
+    },
+    "fes_meknes": {
+        "name": "Fès-Meknès", "short": "Fès & the Middle Atlas", "emoji": "🎨", "city": "Fès",
+        "x": 72, "y": 15, "palette": ["#f2ead8", "#2b2b2b"], "style": "Beni Ourain & the dyers of Fès",
+        "description": "The heart of Morocco's history, with the imperial cities of Fès and Meknès, and the cedar forests and snowy peaks of the Middle Atlas.",
+        "theme": {'look': 'Thick, shaggy cream wool crossed by thin dark lines that form big diamonds, like a lattice.', 'story': 'Beni Ourain families made these rugs to sleep on and keep warm in the snowy mountains; the lines can be read as paths and signs of protection.', 'tags': ['Knotted pile', 'Cream wool', 'Diamond lattice'], 'pattern': 'lozenge', 'colors': ['#f2ead8', '#2b2b2b', '#d9ccb0', '#6b5a48']},
+        "intro": "Fès has one of the oldest medinas in the world, and the Middle Atlas nearby is home to the Beni Ourain weavers.",
+        "materials": "Beni Ourain rugs use thick, fluffy sheep's wool, often left in its natural cream colour.",
+        "technique": "They are knotted rugs with a long, soft pile, perfect for snowy mountain winters.",
+        "motifs": "Cream wool with dark lines that form diamonds and lozenges.",
+        "colours": "Mostly cream and dark brown, while the dyers of Fès fill huge vats with every colour!",
+        "fact": "In Fès, leather is dyed in giant stone pools of colour at the famous tanneries.",
+        "quiz": ("What do classic Beni Ourain rugs look like?", ["Cream wool with dark diamonds", "Bright green with pink dots", "Shiny gold metal"],
+                 "Think soft, light wool with dark lines.", "Beni Ourain rugs are cream with dark diamonds."),
+    },
+    "rabat_sale_kenitra": {
+        "name": "Rabat-Salé-Kénitra", "short": "Rabat & Zemmour", "emoji": "🏰", "city": "Rabat",
+        "x": 62, "y": 15, "palette": ["#a4161a", "#1d3557"], "style": "Rbati carpets & Zemmour weaves",
+        "description": "The region of Morocco's capital on the Atlantic coast: Rabat and Salé face each other across the Bouregreg river, next to the plains and forests of the Gharb.",
+        "theme": {'look': 'A finely knotted city carpet with a large central medallion framed by several borders, often in rich reds.', 'story': "Rbati carpets were made in town homes and workshops for special rooms and celebrations, showing the city's taste for elegant, orderly designs.", 'tags': ['Fine knots', 'Central medallion', 'Borders'], 'pattern': 'medallion', 'colors': ['#a4161a', '#1d3557', '#e9c46a', '#f1faee']},
+        "intro": "Rabat, Morocco's capital, has a long tradition of city carpets called Rbati rugs.",
+        "materials": "Rbati carpets use fine wool in many dyed colours; nearby Zemmour weavers use sturdy wool.",
+        "technique": "Rbati rugs are knotted very finely, knot by knot, a bit like tiny pixels!",
+        "motifs": "Rbati carpets often have a big central medallion with borders; Zemmour rugs use bold geometric shapes.",
+        "colours": "Rich reds with dark blue and golden details.",
+        "fact": "The Kasbah of the Udayas in Rabat has blue-and-white streets looking over the ocean.",
+        "quiz": ("What is often in the middle of a Rbati carpet?", ["A big medallion", "A zipper", "A pocket"],
+                 "It's a large shape right in the centre.", "Rbati carpets often have a central medallion."),
+    },
+    "casablanca_settat": {
+        "name": "Casablanca-Settat", "short": "Casablanca & Chaouia", "emoji": "🏙️", "city": "Casablanca",
+        "x": 58, "y": 18, "palette": ["#ff6b6b", "#4ecdc4"], "style": "Boucherouite rag rugs",
+        "description": "Home to Casablanca, Morocco's biggest city and business capital, surrounded by the farming plains of Chaouia and the beaches of El Jadida.",
+        "theme": {'look': 'A joyful patchwork of every colour, made from strips of recycled fabric, with free and surprising shapes.', 'story': 'Boucherouite shows creativity and care for the planet: old clothes get a second life as a bright, soft rug.', 'tags': ['Recycled fabric', 'Patchwork', 'Rainbow'], 'pattern': 'patchwork', 'colors': ['#ff6b6b', '#4ecdc4', '#ffe66d', '#6a4c93', '#1a535c']},
+        "intro": "Casablanca is Morocco's biggest city, and the plains around Settat are full of farms.",
+        "materials": "Boucherouite rugs are made from strips of old clothes and fabric: nothing is wasted!",
+        "technique": "Weavers knot strips of recycled cloth onto the warp instead of wool yarn.",
+        "motifs": "Free and playful patterns: patches, stripes and surprising shapes.",
+        "colours": "Every colour of the rainbow, depending on the fabrics that were collected.",
+        "fact": "The Hassan II Mosque in Casablanca is built partly over the Atlantic Ocean!",
+        "quiz": ("What are boucherouite rugs made from?", ["Recycled fabric strips", "Chocolate", "Glass"],
+                 "Old t-shirts get a second life…", "Boucherouite rugs recycle strips of fabric."),
+    },
+    "beni_mellal_khenifra": {
+        "name": "Béni Mellal-Khénifra", "short": "Azilal & Khénifra", "emoji": "⛰️", "city": "Azilal",
+        "x": 64, "y": 28, "palette": ["#ffbe0b", "#fb5607"], "style": "Azilal & Zayane rugs",
+        "description": 'Between the Middle and High Atlas mountains and the Tadla plain, with the Ouzoud waterfalls and many Amazigh villages.',
+        "theme": {'look': 'A cream background covered with bright, playful symbols (zigzags, lines and little figures) placed freely.', 'story': 'Every Azilal rug is personal: the weaver draws her own ideas in wool, like a colourful diary.', 'tags': ['Knotted pile', 'Bright colours', 'Free design'], 'pattern': 'playful', 'colors': ['#f4ecdc', '#fb5607', '#ff006e', '#3a86ff', '#ffbe0b']},
+        "intro": "Between the mountains and the plains, the Azilal and Khénifra areas are famous for joyful rugs.",
+        "materials": "Azilal weavers knot colourful wool onto cream wool, sometimes with cotton for the base.",
+        "technique": "Azilal rugs are knotted with a medium pile, and each weaver invents her own design.",
+        "motifs": "Playful symbols, zigzags and shapes that tell the weaver's own story.",
+        "colours": "Bright orange, pink, blue and yellow on a cream background.",
+        "fact": "The Ouzoud waterfalls near Azilal are among the highest in North Africa!",
+        "quiz": ("What makes Azilal rugs special?", ["Bright colours on cream wool", "They are invisible", "They are made of stone"],
+                 "Imagine a cream rug with happy colours.", "Azilal rugs have bright colours on cream."),
+    },
+    "marrakech_safi": {
+        "name": "Marrakech-Safi", "short": "Marrakech & Chichaoua", "emoji": "🕌", "city": "Marrakech",
+        "x": 56, "y": 30, "palette": ["#c1121f", "#f4a261"], "style": "Chichaoua rugs",
+        "description": 'The region of Marrakech, the red city at the foot of the High Atlas, and of Safi, an Atlantic port famous for its pottery.',
+        "theme": {'look': 'A deep red field with a few simple motifs (zigzags, diamonds, little animals) scattered like stars.', 'story': 'Chichaoua rugs are simple and friendly: the red background makes every little motif stand out.', 'tags': ['Knotted pile', 'Red field', 'Simple motifs'], 'pattern': 'red_field', 'colors': ['#c1121f', '#1b1b1b', '#f4f1de', '#f4a261']},
+        "intro": "Marrakech is the red city, and the villages of Chichaoua nearby weave famous red rugs.",
+        "materials": "Chichaoua weavers use local wool, often dyed red with natural plant dyes.",
+        "technique": "Chichaoua rugs are knotted, with simple shapes spread out on a big red field.",
+        "motifs": "Simple, fun figures (zigzags, diamonds, sometimes little animals) float on the red background.",
+        "colours": "Deep red backgrounds with black, white and yellow details.",
+        "fact": "Jemaa el-Fna square in Marrakech fills with storytellers and musicians every evening!",
+        "quiz": ("What is the main background colour of Chichaoua rugs?", ["Red", "Purple", "Silver"],
+                 "Marrakech is called the ___ city.", "Chichaoua rugs usually have a red background."),
+    },
+    "draa_tafilalet": {
+        "name": "Drâa-Tafilalet", "short": "Ouarzazate & Taznakht", "emoji": "🏜️", "city": "Taznakht",
+        "x": 60, "y": 36, "palette": ["#e9c46a", "#9b2226"], "style": "Taznakht & Glaoua rugs",
+        "description": 'The south-east of kasbahs, palm-filled valleys and dunes: Ouarzazate, the Drâa valley, the Dadès gorges and the dunes of Merzouga.',
+        "theme": {'look': 'Rows of knotted diamonds and crosses alternating with flat-woven stripes, in saffron, henna and deep red.', 'story': 'Mixing two techniques in one rug takes great skill, and the weavers of Taznakht are proud of their natural dyes.', 'tags': ['Flatweave + pile', 'Natural dyes', 'Diamonds'], 'pattern': 'mixed', 'colors': ['#9b2226', '#e9c46a', '#ee9b00', '#2b2d42']},
+        "intro": "In the land of kasbahs, around Ouarzazate and Taznakht, weavers make some of Morocco's most colourful rugs.",
+        "materials": "Taznakht is famous for natural dyes: saffron and henna for yellows and oranges, indigo for blue.",
+        "technique": "Glaoua rugs mix flatweave and knotted pile in the same rug, a clever combination!",
+        "motifs": "Rows of diamonds and crosses, framed by bands of flatweave.",
+        "colours": "Saffron yellow, henna orange and deep red, like the desert kasbahs.",
+        "fact": "Ouarzazate is called the door of the desert, and many films are shot there!",
+        "quiz": ("What is special about Glaoua rugs?", ["They mix flatweave and knots", "They glow in the dark", "They are square pizzas"],
+                 "Two techniques in one rug…", "Glaoua rugs mix flatweave and knotted pile."),
+    },
+    "souss_massa": {
+        "name": "Souss-Massa", "short": "Agadir & the Anti-Atlas", "emoji": "🌳", "city": "Tiznit",
+        "x": 46, "y": 42, "palette": ["#6a994e", "#bc6c25"], "style": "Anti-Atlas weaves & Tiznit silver",
+        "description": 'The south-west: the beach city of Agadir, the fertile Souss valley, the walls of Taroudant, the Anti-Atlas mountains and forests of argan trees.',
+        "theme": {'look': 'Fine, precise stripes with small triangles and crosses, in earthy greens, browns and oranges.', 'story': "The shapes echo the triangles and crosses of Tiznit's famous Amazigh silver jewellery.", 'tags': ['Flatweave', 'Fine stripes', 'Jewellery motifs'], 'pattern': 'fine_stripes', 'colors': ['#6a994e', '#bc6c25', '#dda15e', '#283618']},
+        "intro": "In the south-west, the Souss valley and the Anti-Atlas mountains are the land of argan trees.",
+        "materials": "Weavers use wool from mountain sheep, and argan trees give the region its famous oil.",
+        "technique": "Many Anti-Atlas pieces are flat-woven with thin, precise stripes.",
+        "motifs": "Triangles, crosses and fine stripes, often like the shapes on Tiznit's silver jewellery.",
+        "colours": "Earthy greens, browns and oranges, like the argan forests.",
+        "fact": "In the Souss, goats sometimes climb argan trees to eat the fruit!",
+        "quiz": ("Which tree is famous in the Souss-Massa region?", ["The argan tree", "The maple tree", "The Christmas tree"],
+                 "Its oil is famous all over the world.", "The argan tree grows in Souss-Massa."),
+    },
+    "guelmim_oued_noun": {
+        "name": "Guelmim-Oued Noun", "short": "Guelmim, door of the Sahara", "emoji": "🐪", "city": "Guelmim",
+        "x": 45, "y": 46, "palette": ["#3d2b1f", "#d4a373"], "style": "Nomad tent weaving",
+        "description": "The gateway to the Sahara, where the Anti-Atlas meets the desert and the ocean, with Guelmim's camel market and the oasis of Tighmert.",
+        "theme": {'look': 'Long dark strips of goat and camel hair with a few bold light stripes, sewn side by side.', 'story': "The khaima, the nomad tent, is a family's home: strong, easy to carry and woven by hand.", 'tags': ['Goat & camel hair', 'Tent strips', 'Bold stripes'], 'pattern': 'tent', 'colors': ['#3d2b1f', '#d4a373', '#faedcd', '#7f5539']},
+        "intro": "Guelmim is called the door of the Sahara, and it has a famous camel market.",
+        "materials": "Nomad families weave tent strips from goat and camel hair, strong against rain and sun.",
+        "technique": "Long, narrow strips are woven on a ground loom, then sewn together into a tent (khaima).",
+        "motifs": "Dark bands of goat hair with simple, bold stripes.",
+        "colours": "Dark browns of goat hair and the sandy colours of camel hair.",
+        "fact": "Guelmim's camel market is one of the most famous in Morocco!",
+        "quiz": ("What are nomad tent strips woven from?", ["Goat and camel hair", "Paper", "Plastic bags"],
+                 "Think about the animals of the desert…", "Tents are woven from goat and camel hair."),
+    },
+    "laayoune_sakia_el_hamra": {
+        "name": "Laâyoune-Sakia El Hamra", "short": "Laâyoune & the dunes", "emoji": "⛺", "city": "Laâyoune",
+        "x": 28, "y": 58, "palette": ["#e76f51", "#264653"], "style": "Sahrawi crafts",
+        "description": 'A Saharan region of golden dunes and Atlantic beaches around the city of Laâyoune, home to a rich Sahrawi nomadic culture.',
+        "theme": {'look': 'Leather and woven pieces decorated with stitched geometric stars and crosses in bright colours.', 'story': 'Everything is made to travel: cushions, bags and tent decorations are light, strong and beautifully stitched.', 'tags': ['Leather & wool', 'Stitched stars', 'Bright colours'], 'pattern': 'stitch', 'colors': ['#c68b59', '#e76f51', '#264653', '#2a9d8f']},
+        "intro": "In the Sahara, Sahrawi families have a rich nomadic culture of tents, leather and bright fabrics.",
+        "materials": "Wool, camel hair and decorated leather make cushions, bags and tent decorations.",
+        "technique": "Woven strips and leather pieces are sewn together, so everything is light and easy to carry.",
+        "motifs": "Geometric shapes stitched in bright colours, a bit like little maps of the stars.",
+        "colours": "Bright melhfa colours (orange, blue and green) against the golden dunes.",
+        "fact": "Sakia El Hamra means 'the red canal', named after a river valley in the desert.",
+        "quiz": ("Why are nomad crafts easy to carry?", ["Strips are sewn together, so they're light", "They have wheels", "They are tiny"],
+                 "Nomads travel with their tents…", "Sewn strips and leather keep things light and portable."),
+    },
+    "dakhla_oued_ed_dahab": {
+        "name": "Dakhla-Oued Ed-Dahab", "short": "Dakhla, desert meets ocean", "emoji": "🌊", "city": "Dakhla",
+        "x": 12, "y": 79, "palette": ["#0077b6", "#f1c27d"], "style": "Ocean & desert nomad weaving",
+        "description": 'The far south, where the Sahara meets the Atlantic Ocean around the long, blue lagoon of Dakhla.',
+        "theme": {'look': 'Wave-like zigzags and stripes in lagoon blue and golden sand.', 'story': 'The patterns bring two landscapes together: the waves of the ocean and the dunes of the desert.', 'tags': ['Knots & nets', 'Wave zigzags', 'Blue & sand'], 'pattern': 'waves', 'colors': ['#0077b6', '#f1c27d', '#90e0ef', '#fefae0']},
+        "intro": "Dakhla is where the Sahara meets the Atlantic Ocean, around a huge blue lagoon.",
+        "materials": "Nomad weavers use camel hair, goat hair and wool, and fishermen mend nets with strong knots.",
+        "technique": "Net-making and weaving both need careful knots: each knot must be tight and even.",
+        "motifs": "Wave-like zigzags and stripes that remind you of the ocean and the dunes.",
+        "colours": "Lagoon blue and golden sand.",
+        "fact": "Dakhla's lagoon is so windy that people come from all over the world to kite-surf!",
+        "quiz": ("What does Dakhla's landscape mix?", ["Desert and ocean", "Snow and ice", "Jungle and volcanoes"],
+                 "Sand dunes next to…", "In Dakhla, the desert meets the ocean."),
+    },
+}
 
 
 def build_learning_content():
@@ -474,11 +665,11 @@ def build_learning_content():
                         "storyboard": l["storyboard"], "cards": l["cards"], "game": l["game"]},
         })
         for i, (diff, prompt, options, hint, expl) in enumerate(l["questions"]):
-            questions.append({"id": _id("question", l["key"], str(i)), "lesson_id": lid, "kind": "quiz",
+            questions.append({"id": _id("question", l["key"], str(i)), "lesson_id": lid, "region_key": None, "kind": "quiz",
                               "difficulty": diff, "prompt": prompt, "options": options, "answer": options[0],
                               "hint": hint, "explanation": expl})
     for i, (diff, prompt, options, hint, expl) in enumerate(MATERIAL_ROUNDS):
-        questions.append({"id": _id("material", str(i)), "lesson_id": lesson_ids["materials"], "kind": "material",
+        questions.append({"id": _id("material", str(i)), "lesson_id": lesson_ids["materials"], "region_key": None, "kind": "material",
                           "difficulty": diff, "prompt": prompt, "options": options, "answer": options[0],
                           "hint": hint, "explanation": expl})
     for g in GAMES:
@@ -490,6 +681,16 @@ def build_learning_content():
     for key, title, desc, emoji, rule in ACHIEVEMENTS:
         achievements.append({"id": _id("achievement", key), "key": key, "title": title, "description": desc,
                              "emoji": emoji, "rule": rule})
+    regions = []
+    for pos, key in enumerate(REGION_ORDER, start=1):
+        r = REGIONS[key]
+        regions.append({"id": _id("region", key), "key": key, "position": pos, "name": r["name"],
+                        "short_name": r["short"], "emoji": r["emoji"],
+                        "content": {k: v for k, v in r.items() if k not in ("name", "short", "emoji", "quiz")}})
+        prompt, options, hint, expl = r["quiz"]
+        questions.append({"id": _id("region-question", key), "lesson_id": None, "region_key": key, "kind": "region",
+                          "difficulty": 1, "prompt": prompt, "options": options, "answer": options[0],
+                          "hint": hint, "explanation": expl})
     # Order matters for Supabase foreign keys.
-    return {"mk_lessons": lessons, "mk_games": games, "mk_questions": questions,
+    return {"mk_lessons": lessons, "mk_games": games, "mk_regions": regions, "mk_questions": questions,
             "mk_rewards": rewards, "mk_achievements": achievements}

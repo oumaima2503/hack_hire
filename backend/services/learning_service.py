@@ -12,6 +12,7 @@ from learning_content import (BASE_THEMES, COLORS, DIFFICULTY_LABELS, LEARNING_S
                               THEME_FROM_INTEREST, THEMES)
 from middleware import get_repo
 from repository import now_iso
+from services import regions_service as rs
 from validators import ApiError, require
 
 THEME_DEFAULT_COLOR = {"space": "blue", "ocean": "blue", "dinosaurs": "green", "jungle": "green",
@@ -149,6 +150,7 @@ def stats(child_id):
         "streak_days": streak_days(ledger),
         "items_unlocked": len(repo.select("mk_child_rewards", child_id=child_id)),
         "achievements": len(repo.select("mk_child_achievements", child_id=child_id)),
+        "regions_visited": rs.visited_count(child_id),
     }
 
 
@@ -249,12 +251,15 @@ def require_unlocked(child, lesson):
 
 def lessons_overview(child):
     progress, unlocked = progress_by_lesson(child["id"]), unlocked_lesson_ids(child["id"])
+    by_key = rs.regions_by_key()
+    lesson_regions = {lk: [by_key[k] for k in keys] for lk, keys in rs.regions_by_lesson(child).items()}
     out = []
     for l in lessons_sorted():
         p = progress.get(l["id"], {})
         out.append({"key": l["key"], "position": l["position"], "title": l["title"], "emoji": l["emoji"],
                     "summary": l["summary"], "status": p.get("status", "new"), "unlocked": l["id"] in unlocked,
-                    "video_watched": p.get("video_watched", False), "game": l["content"].get("game")})
+                    "video_watched": p.get("video_watched", False), "game": l["content"].get("game"),
+                    "regions": [{k: r[k] for k in ("key", "short_name", "emoji")} for r in lesson_regions.get(l["key"], [])]})
     return out
 
 
@@ -291,7 +296,8 @@ def lesson_detail(child, key):
         "video_url": lesson.get("video_url"),
         "game": {"key": game["key"], "title": game["title"], "emoji": game["emoji"]} if game else None,
         "status": progress["status"], "video_watched": progress["video_watched"],
-        "has_quiz": bool(get_repo().select("mk_questions", lesson_id=lesson["id"], kind="quiz")),
+        "has_quiz": bool(get_repo().select("mk_questions", lesson_id=lesson["id"], kind="quiz")) or bool(rs.region_questions(child, key)),
+        "regions": rs.lesson_regions(child, key),
     }
 
 
@@ -308,7 +314,8 @@ def lesson_quiz(child, key):
     pool = [q for q in get_repo().select("mk_questions", lesson_id=lesson["id"], kind="quiz") if q["difficulty"] <= level]
     pool.sort(key=lambda q: q["difficulty"])
     picked = pool[:QUIZ_SIZE[level]] if len(pool) > QUIZ_SIZE[level] else pool
-    return [public_question(q) for q in picked]
+    # Each regional stop of this lesson adds its own question.
+    return [public_question(q) for q in picked + rs.region_questions(child, key)]
 
 
 def mark_video_watched(child, key):
@@ -336,13 +343,18 @@ def answer_question(child, question_id, choice):
     repo = get_repo()
     q = repo.get("mk_questions", question_id)
     require(q is not None, "Question not found", 404)
-    lesson = repo.get("mk_lessons", q["lesson_id"])
+    if q["kind"] == "region":  # hosted by whichever lesson visits that region on this child's route
+        lesson_key = rs.region_lesson(child, q.get("region_key"))
+        require(lesson_key is not None, "Question not found", 404)
+        lesson = lesson_by_key(lesson_key)
+    else:
+        lesson = repo.get("mk_lessons", q["lesson_id"])
     require_unlocked(child, lesson)  # no farming points on lessons the child hasn't reached
     choice = str(choice or "")[:200]
     previous = repo.select("mk_child_answers", child_id=child["id"], question_id=q["id"])
     correct = choice == q["answer"]
     repo.insert("mk_child_answers", {"child_id": child["id"], "question_id": q["id"], "choice": choice, "correct": correct})
-    if q["kind"] == "quiz":
+    if q["kind"] in ("quiz", "region"):
         row = _progress_row(child, lesson)
         repo.update("mk_child_progress", row["id"], {"quiz_total": row["quiz_total"] + 1,
                                                      "quiz_correct": row["quiz_correct"] + int(correct)})
@@ -371,6 +383,7 @@ def experience(child):
                        "reading_level": reading_level(child), "speed_seconds": speed_seconds(child)},
         "progress": s,
         "next_lesson": next_lesson(child),
+        "regions": rs.journey(child),
         "available_themes": [{"key": k, "name": THEMES[k]["name"], "emoji": THEMES[k]["emoji"]}
                              for k in available_themes(child["id"])],
     }
@@ -411,5 +424,6 @@ def progress_summary(child):
                    "max_score": games.get(g["id"], {}).get("max_score", 0),
                    "completed": games.get(g["id"], {}).get("completed", False)}
                   for g in repo.select("mk_games")],
+        "regions": rs.journey(child),
         "recent_points": [{"reason": e["reason"], "points": e["points"], "created_at": e["created_at"]} for e in ledger[:12]],
     }

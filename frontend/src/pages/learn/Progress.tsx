@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api, type ProgressSummary, type Rug } from '../../api'
 import { RugView } from '../../components/RugView'
 import { REASON_LABELS, useLearn } from '../../learn/LearnContext'
+import { RegionPassport } from '../../learn/RegionMap'
 
 export function StatTiles({ s, pointEmoji = '⭐', pointsLabel = 'points', levelLabel = 'Level' }: {
   s: ProgressSummary['stats']
@@ -18,6 +19,7 @@ export function StatTiles({ s, pointEmoji = '⭐', pointsLabel = 'points', level
     ['🏅', s.achievements, 'achievements'],
     ['🧶', s.rugs_created, 'rugs'],
     ['🔥', s.streak_days, 'day streak'],
+    ['🗺️', `${s.regions_visited}/12`, 'regions'],
   ] as const
   return (
     <div className="tiles">
@@ -49,6 +51,11 @@ export default function Progress() {
     <div className="learn-page">
       <h1>{exp.theme.icons.progress} My progress</h1>
       <StatTiles s={data.stats} pointEmoji={v.point_emoji} pointsLabel={v.points} levelLabel={v.level} />
+
+      <section className="card">
+        <h2>🛂 My Morocco passport</h2>
+        <RegionPassport journey={data.regions} />
+      </section>
 
       <section className="card">
         <h2>📚 Lessons</h2>

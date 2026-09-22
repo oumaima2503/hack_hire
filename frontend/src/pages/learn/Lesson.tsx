@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { api, type Lesson as LessonT, type LessonSummary, type Question } from '../../api'
 import { speak, stopSpeaking, useLearn } from '../../learn/LearnContext'
 import { QuestionRunner } from '../../learn/QuestionRunner'
+import { RegionStops } from '../../learn/RegionMap'
 import { Storyboard } from '../../learn/Storyboard'
 import { TapCards } from '../../learn/TapCards'
 
@@ -106,7 +107,8 @@ export default function Lesson() {
               )}
               {finished.next && finished.next.key !== key && (
                 <Link to={`../learn/${finished.next.key}`} className="btn ghost">
-                  Next: {finished.next.emoji} {finished.next.title} ➜
+                  Next: {finished.next.emoji} {finished.next.title}
+                  {finished.next.regions.length > 0 && ` · ✈️ ${finished.next.regions.map((r) => r.short_name).join(' & ')}`} ➜
                 </Link>
               )}
               {key === 'unlock' && (
@@ -129,9 +131,15 @@ export default function Lesson() {
           <p className="eyebrow">Stage {lesson.position} of 8</p>
           <h1>{lesson.title}</h1>
           <p className="lead-dark">{lesson.summary}</p>
+          {lesson.regions.length > 0 && (
+            <p className="lesson-where">
+              📍 {lesson.regions.map((r) => `${r.emoji} ${r.short_name}`).join('  ➜  ')}
+            </p>
+          )}
         </div>
         {lesson.status === 'completed' && <span className="badge-done">✓ Done</span>}
       </header>
+      <RegionStops regions={lesson.regions} lang={lang} />
       {lesson.sections.map((s) => sections[s])}
       {lesson.game && !finished && (
         <p className="hint center">

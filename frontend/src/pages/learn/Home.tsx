@@ -2,7 +2,9 @@ import { useEffect, useState, type MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { api, type LessonSummary } from '../../api'
 import { RUG_JOKES, confettiFrom, sfx, speak } from '../../fun'
+import { avatarEmoji } from '../../content'
 import { useLearn } from '../../learn/LearnContext'
+import { RegionMap } from '../../learn/RegionMap'
 import { Journey } from './Journey'
 
 export default function Home() {
@@ -88,6 +90,10 @@ export default function Home() {
           <strong>{p.streak_days}</strong>
           <small>day streak</small>
         </div>
+      </section>
+
+      <section className="card">
+        <RegionMap journey={exp.regions} childId={childId} avatar={avatarEmoji(exp.child.avatar_key)} />
       </section>
 
       <section className="card">

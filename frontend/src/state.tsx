@@ -13,6 +13,7 @@ export interface Profile {
   favorite_color?: string
   learning_style?: 'watch' | 'listen' | 'do'
   rug_style?: string
+  home_region?: string | null
 }
 
 export interface Session {

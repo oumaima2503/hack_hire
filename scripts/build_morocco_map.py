@@ -1,0 +1,146 @@
+"""Build the vector map of Morocco used by the learning journey.
+
+Source: Natural Earth 1:50m boundaries (public domain) via the `world-atlas` package:
+    https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json
+Morocco (504) and the southern provinces (732) are merged into one outline, as on
+official Moroccan maps. The outline is projected (equirectangular, cos-corrected),
+fitted to a 0-100 viewBox, simplified, and written to frontend/src/learn/moroccoMap.ts.
+Region cities are projected with the same function; their x/y go in learning_content.py.
+
+Usage: python scripts/build_morocco_map.py path/to/countries-50m.json
+"""
+import json
+import math
+import os
+import sys
+
+MID_LAT = math.radians(28.5)
+PAD = 3.0
+CITIES = {  # region → (representative city, lat, lon)
+    "tanger_tetouan_al_hoceima": ("Chefchaouen", 35.17, -5.27),
+    "oriental": ("Oujda", 34.68, -1.91),
+    "fes_meknes": ("Fès", 34.03, -5.00),
+    "rabat_sale_kenitra": ("Rabat", 34.02, -6.84),
+    "casablanca_settat": ("Casablanca", 33.57, -7.59),
+    "beni_mellal_khenifra": ("Azilal", 31.96, -6.57),
+    "marrakech_safi": ("Marrakech", 31.63, -8.01),
+    "draa_tafilalet": ("Taznakht", 30.58, -7.20),
+    "souss_massa": ("Tiznit", 29.70, -9.73),
+    "guelmim_oued_noun": ("Guelmim", 28.99, -10.06),
+    "laayoune_sakia_el_hamra": ("Laâyoune", 27.15, -13.20),
+    "dakhla_oued_ed_dahab": ("Dakhla", 23.68, -15.96),
+}
+
+
+def decode_arcs(topo):
+    sx, sy = topo["transform"]["scale"]
+    tx, ty = topo["transform"]["translate"]
+    arcs = []
+    for arc in topo["arcs"]:
+        x = y = 0
+        pts = []
+        for dx, dy in arc:
+            x += dx
+            y += dy
+            pts.append((x * sx + tx, y * sy + ty))  # (lon, lat)
+        arcs.append(pts)
+    return arcs
+
+
+def rings_of(geom):
+    polys = geom["arcs"] if geom["type"] == "MultiPolygon" else [geom["arcs"]]
+    return [ring for poly in polys for ring in poly]
+
+
+def outline(topo, ids):
+    arcs = decode_arcs(topo)
+    geoms = [g for g in topo["objects"]["countries"]["geometries"] if g.get("id") in ids]
+    assert len(geoms) == len(ids), f"found {[g.get('id') for g in geoms]}"
+    uses = {}
+    for g in geoms:
+        for ring in rings_of(g):
+            for a in ring:
+                k = a if a >= 0 else ~a
+                uses[k] = uses.get(k, 0) + 1
+    # Arcs shared by both shapes are the internal border: drop them to get the union outline.
+    segments = []
+    for g in geoms:
+        for ring in rings_of(g):
+            for a in ring:
+                k = a if a >= 0 else ~a
+                if uses[k] == 1:
+                    pts = arcs[k] if a >= 0 else arcs[k][::-1]
+                    segments.append(pts)
+    rings = []
+    while segments:
+        ring = list(segments.pop(0))
+        changed = True
+        while changed:
+            changed = False
+            for i, s in enumerate(segments):
+                if _close(s[0], ring[-1]):
+                    ring += s[1:]
+                elif _close(s[-1], ring[-1]):
+                    ring += s[::-1][1:]
+                else:
+                    continue
+                segments.pop(i)
+                changed = True
+                break
+        rings.append(ring)
+    return max(rings, key=len)  # mainland (no significant islands)
+
+
+def _close(a, b):
+    return abs(a[0] - b[0]) < 1e-6 and abs(a[1] - b[1]) < 1e-6
+
+
+def rdp(points, eps):
+    if len(points) < 3:
+        return points
+    (x1, y1), (x2, y2) = points[0], points[-1]
+    dx, dy = x2 - x1, y2 - y1
+    norm = math.hypot(dx, dy) or 1e-12
+    dmax, idx = 0, 0
+    for i, (x, y) in enumerate(points[1:-1], start=1):
+        d = abs(dy * x - dx * y + x2 * y1 - y2 * x1) / norm
+        if d > dmax:
+            dmax, idx = d, i
+    if dmax > eps:
+        return rdp(points[:idx + 1], eps)[:-1] + rdp(points[idx:], eps)
+    return [points[0], points[-1]]
+
+
+def main(path):
+    with open(path, encoding="utf-8") as f:
+        topo = json.load(f)
+    ring = outline(topo, {"504", "732"})
+    proj = [(lon * math.cos(MID_LAT), -lat) for lon, lat in ring]
+    xs, ys = [p[0] for p in proj], [p[1] for p in proj]
+    minx, miny = min(xs), min(ys)
+    w, h = max(xs) - minx, max(ys) - miny
+    scale = (100 - 2 * PAD) / max(w, h)
+    offx = PAD + ((100 - 2 * PAD) - w * scale) / 2
+    offy = PAD + ((100 - 2 * PAD) - h * scale) / 2
+
+    def fit(lon, lat):
+        return (round((lon * math.cos(MID_LAT) - minx) * scale + offx, 2),
+                round((-lat - miny) * scale + offy, 2))
+
+    full = [fit(lon, lat) for lon, lat in ring]
+    half = len(full) // 2  # closed ring: simplify two halves (RDP needs distinct endpoints)
+    pts = rdp(full[:half + 1], 0.12)[:-1] + rdp(full[half:], 0.12)
+    d = "M" + " L".join(f"{x:.1f} {y:.1f}" for x, y in pts) + " Z"
+    out = os.path.join(os.path.dirname(__file__), "..", "frontend", "src", "learn", "moroccoMap.ts")
+    with open(out, "w", encoding="utf-8") as f:
+        f.write("// Generated by scripts/build_morocco_map.py from Natural Earth 1:50m (public domain).\n"
+                "// Morocco including its southern provinces, equirectangular projection, 0-100 viewBox.\n"
+                f"export const MOROCCO_PATH =\n  '{d}'\n")
+    print(f"outline: {len(ring)} → {len(pts)} points, written to {os.path.normpath(out)}")
+    for key, (city, lat, lon) in CITIES.items():
+        x, y = fit(lon, lat)
+        print(f'{key}: {city} "x": {x:.0f}, "y": {y:.0f}')
+
+
+if __name__ == "__main__":
+    main(sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.environ.get("TEMP", "."), "countries-50m.json"))

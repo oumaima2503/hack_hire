@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, type LessonSummary } from '../../api'
+import { avatarEmoji } from '../../content'
 import { useLearn } from '../../learn/LearnContext'
+import { RegionMap } from '../../learn/RegionMap'
 
 /** The 8-stage path. Locked stages show a padlock until the previous one is done. */
 export function Journey({ lessons }: { lessons: LessonSummary[] }) {
@@ -18,6 +20,15 @@ export function Journey({ lessons }: { lessons: LessonSummary[] }) {
                 {l.position}. {l.title}
               </strong>
               <small>{l.unlocked ? l.summary : 'Finish the previous stage to unlock'}</small>
+              {l.regions.length > 0 && (
+                <span className="journey-regions">
+                  {l.regions.map((r) => (
+                    <span key={r.key} className="region-chip">
+                      {r.emoji} {r.short_name}
+                    </span>
+                  ))}
+                </span>
+              )}
             </span>
             {l.status === 'completed' && <span className="journey-badge">{exp.theme.vocab.point_emoji}</span>}
           </>
@@ -46,6 +57,9 @@ export default function JourneyPage() {
       <p className="lead-dark">
         {exp.learning_style.emoji} Lessons are set to “{exp.learning_style.label}” at {exp.difficulty.label} level.
       </p>
+      <section className="card">
+        <RegionMap journey={exp.regions} childId={childId} avatar={avatarEmoji(exp.child.avatar_key)} />
+      </section>
       <Journey lessons={lessons} />
     </div>
   )

@@ -7,7 +7,7 @@ import { ExplorerCard } from '../components/ExplorerCard'
 import { Layout } from '../components/Layout'
 import { Rugy, type Mood } from '../components/Rugy'
 import {
-  AGES, AVATARS, CHALLENGES, FAVORITE_COLORS, ISLANDS, LEARNING_STYLES, RUG_STYLES, WORLDS, ageBand, avatarEmoji, levelFromScore,
+  AGES, AVATARS, CHALLENGES, FAVORITE_COLORS, ISLANDS, LEARNING_STYLES, REGIONS, RUG_STYLES, WORLDS, ageBand, avatarEmoji, levelFromScore,
 } from '../content'
 import { confetti, confettiFrom, sfx, speak, stopSpeaking } from '../fun'
 import { LANG_FLAGS, LANG_NAMES, useI18n, type I18nKey } from '../i18n'
@@ -322,13 +322,14 @@ function StepAge({ busy, save, goBack }: StepProps) {
   const { t } = useI18n()
   const { session, update, updateProfile } = useSession()
   const [age, setAge] = useState<number | undefined>(session.profile.age)
+  const [region, setRegion] = useState<string | null>(session.profile.home_region ?? null)
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
     if (!age) return
     save(async () => {
-      await api.updateChild(session.childId!, { age })
-      updateProfile({ age, age_band: ageBand(age) })
+      await api.updateChild(session.childId!, { age, home_region: region })
+      updateProfile({ age, age_band: ageBand(age), home_region: region })
       update({ step: 3 })
     })
   }
@@ -359,6 +360,35 @@ function StepAge({ busy, save, goBack }: StepProps) {
           <strong>{t('age_cake', { n: age })}</strong>
         </div>
       )}
+      <p className="sublabel">📍 {t('region_q')}</p>
+      <p className="hint">{t('region_hint')}</p>
+      <div className="region-pick" dir="ltr">
+        {REGIONS.map((r) => (
+          <button
+            type="button"
+            key={r.key}
+            className={`chip-btn${region === r.key ? ' on' : ''}`}
+            onClick={() => {
+              sfx.select()
+              setRegion(r.key)
+            }}
+            aria-pressed={region === r.key}
+          >
+            {r.emoji} {r.name}
+          </button>
+        ))}
+        <button
+          type="button"
+          className={`chip-btn${region === null ? ' on' : ''}`}
+          onClick={() => {
+            sfx.select()
+            setRegion(null)
+          }}
+          aria-pressed={region === null}
+        >
+          🌍 {t('region_elsewhere')}
+        </button>
+      </div>
       <Nav goBack={goBack} busy={busy} missing={!age && t('need_pick')} />
     </form>
   )

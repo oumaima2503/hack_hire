@@ -70,6 +70,22 @@ export const BOX_EMOJI: Record<string, string> = {
   animals: '🐾', nature: '🌱', art: '🧶', space: '🌟', music: '🎶', stories: '📖', generic: '🗺️', name_card: '🪪',
 }
 
+// The 12 regions of Morocco (north → south). Keys match backend/learning_content.py.
+export const REGIONS: { key: string; name: string; emoji: string }[] = [
+  { key: 'tanger_tetouan_al_hoceima', name: 'Tanger-Tétouan-Al Hoceïma', emoji: '🏔️' },
+  { key: 'oriental', name: "L'Oriental", emoji: '🌴' },
+  { key: 'fes_meknes', name: 'Fès-Meknès', emoji: '🎨' },
+  { key: 'rabat_sale_kenitra', name: 'Rabat-Salé-Kénitra', emoji: '🏰' },
+  { key: 'casablanca_settat', name: 'Casablanca-Settat', emoji: '🏙️' },
+  { key: 'beni_mellal_khenifra', name: 'Béni Mellal-Khénifra', emoji: '⛰️' },
+  { key: 'marrakech_safi', name: 'Marrakech-Safi', emoji: '🕌' },
+  { key: 'draa_tafilalet', name: 'Drâa-Tafilalet', emoji: '🏜️' },
+  { key: 'souss_massa', name: 'Souss-Massa', emoji: '🌳' },
+  { key: 'guelmim_oued_noun', name: 'Guelmim-Oued Noun', emoji: '🐪' },
+  { key: 'laayoune_sakia_el_hamra', name: 'Laâyoune-Sakia El Hamra', emoji: '⛺' },
+  { key: 'dakhla_oued_ed_dahab', name: 'Dakhla-Oued Ed-Dahab', emoji: '🌊' },
+]
+
 export const AGES = [3, 4, 5, 6, 7, 8, 9, 10, 11]
 export const ageBand = (age: number): AgeBand => (age <= 5 ? '3-5' : age <= 8 ? '6-8' : '9-11')
 

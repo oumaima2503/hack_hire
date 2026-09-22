@@ -57,6 +57,9 @@ const en = {
   need_two: 'Pick 2 islands! 🏝️🏝️',
   hello_name: 'Hi {name}! 👋',
   age_cake: 'You are {n}! 🎉',
+  region_q: 'Where do you live in Morocco?',
+  region_hint: 'Your journey across the 12 regions of Morocco starts there! (a grown-up can help)',
+  region_elsewhere: 'Somewhere else',
 
   auth_register_tab: 'Create an account',
   auth_login_tab: 'I have an account',
@@ -227,6 +230,9 @@ const fr: Record<Key, string> = {
   need_two: 'Choisis 2 îles ! 🏝️🏝️',
   hello_name: 'Salut {name} ! 👋',
   age_cake: 'Tu as {n} ans ! 🎉',
+  region_q: 'Où habites-tu au Maroc ?',
+  region_hint: 'Ton voyage à travers les 12 régions du Maroc commence là ! (un adulte peut aider)',
+  region_elsewhere: 'Ailleurs',
 
   auth_register_tab: 'Créer un compte',
   auth_login_tab: "J'ai un compte",
@@ -395,6 +401,9 @@ const ar: Record<Key, string> = {
   need_two: 'اختر جزيرتين! 🏝️🏝️',
   hello_name: 'مرحباً {name}! 👋',
   age_cake: 'عمرك {n} سنوات! 🎉',
+  region_q: 'أين تسكن في المغرب؟',
+  region_hint: 'رحلتك عبر جهات المغرب الاثنتي عشرة تبدأ من هناك! (يمكن لشخص بالغ أن يساعدك)',
+  region_elsewhere: 'مكان آخر',
 
   auth_register_tab: 'إنشاء حساب',
   auth_login_tab: 'لدي حساب',

@@ -78,6 +78,19 @@ Row-level security is on for every table with no policies, so only the backend's
 | Rug style | Shapes and colours in Build the Pattern and the Rug Studio, design tips |
 | Buddy, interests, language | Avatar and stickers, the funnel adventure and Box, and the assistant's reply language |
 
+## Regional journey across Morocco
+
+The 8-stage course is also a trip through all **12 regions of Morocco** (`backend/services/regions_service.py`).
+
+- **Route:** it starts in the child's home region (optional, asked on the age step and editable by parents; Marrakech-Safi if not set). It heads for the nearer end of the country first, then flies to the other side, so every region is visited once.
+- **Stops:** each lesson hosts 1–2 regions (1·2·1·2·1·2·1·2). Each stop shows that region's style, city, colours and a fun fact. Its text matches the lesson topic: materials in *Choose Materials*, technique in *Learn the Tools*, motifs in *Prepare the Design*, and so on.
+- **Quiz questions:** each region adds its own question to the lesson quiz and to the Great Challenge, checked on the server like the others.
+- **Rewards:** finishing a lesson marks its regions as visited. Their colours and emblems join the rug studio palette, and there are achievements for 6 and 12 regions.
+- **Where it shows:** a map with the route on the home and Learn pages, a 📍 banner on each lesson, a passport on the Progress page and in the parent's child view, and the region count on the parent dashboard.
+- **Map:** the outline is drawn from Natural Earth data (public domain), with Morocco and its southern provinces as one country. Each region is placed at its representative city's real latitude and longitude. To regenerate `frontend/src/learn/moroccoMap.ts`, run `python scripts/build_morocco_map.py countries-50m.json` (file from `world-atlas@2`).
+- **Region cards:** each region has a description, a style theme (look, story, tags, colours) and a mini rug preview drawn in that style (`frontend/src/learn/regionRug.ts`). You see them by tapping a region on the map, on a lesson's stop, or on a passport stamp.
+- **Editing content:** it lives in `REGIONS` in `backend/learning_content.py`. Run `supabase/schema.sql` (v3 section) and then `python seed.py` to push it to Supabase.
+
 ## Not done yet
 
 - Lesson and game text is English only. The onboarding and funnel are EN/FR/AR, and the assistant answers in the child's language.

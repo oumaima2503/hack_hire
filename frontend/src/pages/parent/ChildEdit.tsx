@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, type Child } from '../../api'
 import { useAuth } from '../../auth'
 import { Layout } from '../../components/Layout'
-import { AVATARS, FAVORITE_COLORS, ISLANDS, LEARNING_STYLES, RUG_STYLES, WORLDS } from '../../content'
+import { AVATARS, FAVORITE_COLORS, ISLANDS, LEARNING_STYLES, REGIONS, RUG_STYLES, WORLDS } from '../../content'
 
 const LABELS: Record<string, string> = {
   watch: 'Watch (videos first)', listen: 'Listen (read aloud)', do: 'Do (hands-on first)',
@@ -45,7 +45,11 @@ export default function ChildEdit() {
       const { name, avatar_key, age, interests, selected_theme, favorite_color, learning_style, rug_style, level, language } = child
       const fields = { name, avatar_key, age, interests, selected_theme, favorite_color, learning_style, rug_style, level, language }
       // Skip fields never set during onboarding, so validation only sees real choices.
-      const patch = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== null && v !== undefined)) as Partial<Child>
+      // home_region is always sent: null is a valid choice ("outside Morocco").
+      const patch = {
+        ...Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== null && v !== undefined)),
+        home_region: child.home_region,
+      } as Partial<Child>
       await api.editChild(childId, patch)
       setSaved(true)
       refresh()
@@ -97,6 +101,18 @@ export default function ChildEdit() {
             </select>
           </label>
         </div>
+
+        <label className="field">
+          <span>Home region (the journey across Morocco starts here)</span>
+          <select value={child.home_region ?? ''} onChange={(e) => set('home_region', e.target.value || null)}>
+            <option value="">Outside Morocco / not sure (start in Marrakech-Safi)</option>
+            {REGIONS.map((r) => (
+              <option key={r.key} value={r.key}>
+                {r.emoji} {r.name}
+              </option>
+            ))}
+          </select>
+        </label>
 
         <fieldset>
           <legend>Buddy (favourite animal)</legend>

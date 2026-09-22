@@ -5,6 +5,7 @@ import { Layout } from '../../components/Layout'
 import { RugView } from '../../components/RugView'
 import { avatarEmoji } from '../../content'
 import { REASON_LABELS } from '../../learn/LearnContext'
+import { RegionPassport } from '../../learn/RegionMap'
 import { StatTiles } from '../learn/Progress'
 
 export default function ChildDetail() {
@@ -45,6 +46,15 @@ export default function ChildDetail() {
         <section className="panel">
           <StatTiles s={d.stats} />
           {d.progress.quiz_accuracy !== null && <p className="hint">🎯 Quiz accuracy: {Math.round(d.progress.quiz_accuracy * 100)}%</p>}
+        </section>
+
+        <section className="panel">
+          <h2>🗺️ Journey across Morocco ({d.progress.regions.visited}/{d.progress.regions.total} regions)</h2>
+          <p className="hint">
+            {d.name}’s route starts in {d.progress.regions.route[0]?.name}
+            {d.progress.regions.home_region ? ' (home region)' : ''} and visits every region as the lessons are completed.
+          </p>
+          <RegionPassport journey={d.progress.regions} />
         </section>
 
         <div className="two-col">

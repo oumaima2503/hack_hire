@@ -8,7 +8,7 @@ import re
 from datetime import datetime, timedelta, timezone
 
 from middleware import get_repo
-from services import gemini_client, learning_service as ls
+from services import gemini_client, learning_service as ls, regions_service as rs
 from services.games_service import game_by_key
 from validators import clean_text, redact_personal_info, require
 
@@ -26,10 +26,12 @@ def _context(child, lesson_key=None, game_key=None, question_id=None):
     if game_key:
         game = next((g for g in repo.select("mk_games", key=game_key)), None)
     question = repo.get("mk_questions", question_id) if question_id and len(str(question_id)) == 36 else None
-    if question and question["lesson_id"] not in ls.unlocked_lesson_ids(child["id"]):
+    if question and not (question["region_key"] in rs.unlocked_region_keys(child) if question.get("kind") == "region"
+                         else question["lesson_id"] in ls.unlocked_lesson_ids(child["id"])):
         question = None
     s = ls.stats(child["id"])
     nxt = ls.next_lesson(child)
+    trip = rs.journey(child)
     return {
         "theme": theme, "lesson": lesson, "game": game, "question": question,
         "age": child.get("age"), "age_band": child.get("age_band") or "6-8",
@@ -39,6 +41,8 @@ def _context(child, lesson_key=None, game_key=None, question_id=None):
         "rug_style": ls.rug_style_for(child)["name"],
         "completed": [l["title"] for l in overview if l["status"] == "completed"],
         "next_lesson": nxt["title"] if nxt else None, "points": s["total_points"], "xp_level": s["xp_level"],
+        "regions_now": [f"{r['name']} ({r['style']})" for r in (rs.lesson_regions(child, lesson_key) if lesson_key else trip["current"])],
+        "regions_visited": [r["name"] for r in trip["route"] if r["status"] == "visited"],
     }
 
 
@@ -83,6 +87,10 @@ def build_system_prompt(ctx):
         info.append(f"Current game: {ctx['game']['title']}")
     if ctx["next_lesson"]:
         info.append(f"Suggested next lesson: {ctx['next_lesson']}")
+    if ctx["regions_now"]:
+        info.append(f"Current Moroccan region(s) on their journey: {', '.join(ctx['regions_now'])}. Use this region's weaving style in examples.")
+    if ctx["regions_visited"]:
+        info.append(f"Regions already visited: {', '.join(ctx['regions_visited'])}")
     lines += ["CHILD CONTEXT:", *(f"- {i}" for i in info)]
     return "\n".join(lines)
 

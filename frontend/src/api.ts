@@ -21,6 +21,7 @@ export interface Child {
   favorite_color: string | null
   learning_style: 'watch' | 'listen' | 'do' | null
   rug_style: string | null
+  home_region: string | null
   total_points: number
 }
 
@@ -77,6 +78,7 @@ export interface Stats {
   streak_days: number
   items_unlocked: number
   achievements: number
+  regions_visited: number
 }
 
 export interface LessonSummary {
@@ -89,6 +91,49 @@ export interface LessonSummary {
   unlocked: boolean
   video_watched: boolean
   game: string | null
+  regions: { key: string; short_name: string; emoji: string }[]
+}
+
+/** A Moroccan region as it appears on the child's journey. */
+export interface Region {
+  key: string
+  name: string
+  short_name: string
+  emoji: string
+  city: string
+  style: string
+  palette: string[]
+  fact: string
+  description: string
+  theme: RegionTheme | null
+  x: number
+  y: number
+}
+
+/** The visual identity of a region's weaving style (drives the mini rug preview). */
+export interface RegionTheme {
+  look: string
+  story: string
+  tags: string[]
+  pattern: 'stripes' | 'bands' | 'lozenge' | 'medallion' | 'patchwork' | 'playful' | 'red_field' | 'mixed' | 'fine_stripes' | 'tent' | 'stitch' | 'waves'
+  colors: string[]
+}
+
+export interface RouteStop extends Region {
+  status: 'visited' | 'current' | 'locked'
+  lesson_key: string
+  lesson_title: string
+  lesson_position: number
+  travel: 'start' | 'road' | 'fly'
+  home: boolean
+}
+
+export interface Journey {
+  home_region: string | null
+  route: RouteStop[]
+  visited: number
+  total: number
+  current: RouteStop[]
 }
 
 export interface Experience {
@@ -99,6 +144,7 @@ export interface Experience {
   difficulty: { level: number; label: string; reading_level: number; speed_seconds: number | null }
   progress: Stats
   next_lesson: LessonSummary | null
+  regions: Journey
   available_themes: { key: string; name: string; emoji: string }[]
 }
 
@@ -120,6 +166,7 @@ export interface Lesson {
   status: string
   video_watched: boolean
   has_quiz: boolean
+  regions: (Region & { stop: string; home: boolean })[]
 }
 
 export interface Question {
@@ -251,6 +298,7 @@ export interface ProgressSummary {
   quiz_accuracy: number | null
   lessons: (LessonSummary & { quiz_correct: number; quiz_total: number })[]
   games: { key: string; title: string; emoji: string; plays: number; best_score: number; max_score: number; completed: boolean }[]
+  regions: Journey
   recent_points: { reason: string; points: number; created_at: string }[]
 }
 

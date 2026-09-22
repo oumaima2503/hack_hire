@@ -63,6 +63,7 @@ export default function ParentDashboard() {
                   <div><dt>Games</dt><dd>🎮 {s.games_completed}</dd></div>
                   <div><dt>Unlocked</dt><dd>🔓 {s.items_unlocked}</dd></div>
                   <div><dt>Rugs</dt><dd>🧶 {s.rugs_created}</dd></div>
+                  <div className="wide"><dt>Regions of Morocco</dt><dd>🗺️ {s.regions_visited}/12 visited</dd></div>
                 </dl>
                 <div className="meter" aria-label={`${s.lessons_completed} of ${s.lessons_total} lessons`}>
                   <span style={{ width: `${(s.lessons_completed / Math.max(1, s.lessons_total)) * 100}%` }} />

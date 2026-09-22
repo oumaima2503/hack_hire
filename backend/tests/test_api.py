@@ -346,3 +346,64 @@ def test_funnel_flow_still_works(app):
     d = app.test_client().get("/api/dashboard").json
     assert d["relevance"]["gap"] == 2 and d["orders"]["confirmed"] == 1
     assert "sara" not in str(d).lower()
+
+
+# ───────── Moroccan regional journey ─────────
+
+ALL_REGIONS = {"tanger_tetouan_al_hoceima", "oriental", "fes_meknes", "rabat_sale_kenitra", "casablanca_settat",
+               "beni_mellal_khenifra", "marrakech_safi", "draa_tafilalet", "souss_massa", "guelmim_oued_noun",
+               "laayoune_sakia_el_hamra", "dakhla_oued_ed_dahab"}
+
+
+def test_route_covers_all_regions_starting_from_home(app):
+    c = register(app)
+    fes = make_child(c, home_region="fes_meknes")
+    none = make_child(c)
+    j = c.get(f"/api/children/{fes}/experience").json["regions"]
+    keys = [r["key"] for r in j["route"]]
+    assert set(keys) == ALL_REGIONS and len(keys) == 12
+    assert keys[0] == "fes_meknes" and j["route"][0]["home"] and j["home_region"] == "fes_meknes"
+    assert j["visited"] == 0 and [r["key"] for r in j["current"]] == ["fes_meknes"]
+    assert any(r["travel"] == "fly" for r in j["route"])  # one flight to the other side of Morocco
+    assert c.get(f"/api/children/{none}/experience").json["regions"]["route"][0]["key"] == "marrakech_safi"
+    assert c.patch(f"/api/children/{none}", {"home_region": "atlantis"}).status_code == 400
+    assert c.patch(f"/api/children/{none}", {"home_region": None}).status_code == 200
+
+
+def test_regional_stops_follow_the_lesson_topic(app):
+    c = register(app)
+    cid = make_child(c, home_region="dakhla_oued_ed_dahab")
+    lessons = c.get(f"/api/children/{cid}/lessons").json
+    assert [len(l["regions"]) for l in lessons] == [1, 2, 1, 2, 1, 2, 1, 2]
+    assert lessons[0]["regions"][0]["key"] == "dakhla_oued_ed_dahab"
+    stop = c.get(f"/api/children/{cid}/lessons/discover").json["regions"][0]
+    assert stop["home"] and "Sahara meets the Atlantic" in stop["stop"]  # 'intro' text for Discover
+    c.post(f"/api/children/{cid}/lessons/discover/complete")
+    mats = c.get(f"/api/children/{cid}/lessons/materials").json["regions"]
+    assert [r["key"] for r in mats] == ["laayoune_sakia_el_hamra", "guelmim_oued_noun"]
+    assert "camel hair" in mats[0]["stop"]  # 'materials' text for Choose Materials
+
+
+def test_region_questions_checked_and_locked_until_reached(app):
+    c = register(app)
+    cid = make_child(c, home_region="marrakech_safi")
+    quiz = c.get(f"/api/children/{cid}/lessons/discover/quiz").json
+    region_q = next(q for q in quiz if "Chichaoua" in q["prompt"])
+    r = c.post(f"/api/children/{cid}/questions/{region_q['id']}/answer", {"choice": "Red"}).json
+    assert r["correct"] and r["award"]["points_awarded"] == 5
+    far = next(q for q in app.extensions["repo"].select("mk_questions", kind="region") if q["region_key"] == "tanger_tetouan_al_hoceima")
+    assert c.post(f"/api/children/{cid}/questions/{far['id']}/answer", {"choice": "x"}).status_code == 403
+
+
+def test_regions_visited_unlock_colours_and_achievement(app):
+    c = register(app)
+    cid = make_child(c, home_region="souss_massa")
+    for key in ["discover", "materials", "tools", "design", "weaving", "create", "challenges", "unlock"]:
+        assert c.post(f"/api/children/{cid}/lessons/{key}/complete").status_code == 200
+    exp = c.get(f"/api/children/{cid}/experience").json
+    assert exp["regions"]["visited"] == 12 and exp["progress"]["regions_visited"] == 12
+    earned = {a["key"] for a in c.get(f"/api/children/{cid}/rewards").json["achievements"] if a["earned"]}
+    assert {"region_hopper", "all_morocco"} <= earned
+    studio = c.get(f"/api/children/{cid}/games/create_rug").json["studio"]
+    assert "#6a994e" in studio["palette"] and "🌳" in studio["motifs"]  # Souss-Massa colour + emblem
+    assert len(c.get(f"/api/parents/children/{cid}").json["progress"]["regions"]["route"]) == 12

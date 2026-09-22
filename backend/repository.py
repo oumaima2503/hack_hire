@@ -97,7 +97,7 @@ class SupabaseRepository:
     PAGE = 1000
     RETRIES = 3
     CONTENT_TABLES = frozenset({"mk_adventures", "mk_missions", "mk_box_items", "mk_lessons", "mk_games",
-                                "mk_questions", "mk_rewards", "mk_achievements"})
+                                "mk_questions", "mk_rewards", "mk_achievements", "mk_regions"})
     CONTENT_TTL = 300  # seconds; re-run seed.py and wait (or restart) to see content edits
 
     def __init__(self, url, key):
