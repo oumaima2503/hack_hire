@@ -1,5 +1,6 @@
 """Day 1 pre-launch funnel: events, adventure proposal, simulated Payzone checkout,
 blind relevance ratings and the team dashboard (aggregates only)."""
+import os
 import secrets
 from collections import defaultdict
 
@@ -42,7 +43,9 @@ FUNNEL = [
 
 @bp.get("/health")
 def health():
-    return jsonify(ok=True, storage=get_repo().name)
+    # RAILWAY_GIT_COMMIT_SHA is set by Railway: shows exactly which commit is live.
+    version = (os.getenv("RAILWAY_GIT_COMMIT_SHA") or "local")[:7]
+    return jsonify(ok=True, storage=get_repo().name, version=version)
 
 
 @bp.post("/events")
