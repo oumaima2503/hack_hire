@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api, type GameConfig, type GameResult } from '../api'
 import { confettiFrom, sfx } from '../fun'
+import { useGuide } from '../guide/GuideContext'
 import { useLearn } from '../learn/LearnContext'
 
 /** Game 2: tap a tool, then tap its job. */
@@ -12,17 +13,25 @@ export function MatchTools({ config, onDone }: { config: GameConfig; onDone: (r:
   const [mistakes, setMistakes] = useState(0)
   const pairs = config.pairs ?? {}
   const tools = config.tools ?? []
+  const guide = useGuide()
+
+  // Tell the Guide which tool the child is thinking about (for hints only).
+  useEffect(() => {
+    guide.setState({ tool: selected ?? tools.find((t) => !(t.tool in matched))?.tool })
+  }, [selected, matched]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const pickPurpose = async (purpose: string, el: HTMLElement) => {
     if (!selected) return
     if (pairs[selected] !== purpose) {
       sfx.oops()
+      guide.report({ type: 'mistake' })
       setWrong(purpose)
       setMistakes((m) => m + 1)
       setTimeout(() => setWrong(null), 600)
       return
     }
     sfx.select()
+    guide.report({ type: 'success' })
     confettiFrom(el, [tools.find((t) => t.tool === selected)?.emoji ?? '✨', '✨'])
     const next = { ...matched, [selected]: purpose }
     setMatched(next)

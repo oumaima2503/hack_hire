@@ -3,10 +3,12 @@ from content import AGE_BANDS, AVATARS, INTERESTS, LANGUAGES
 from learning_content import COLORS, LEARNING_STYLES, REGION_ORDER, RUG_STYLES, THEMES
 from middleware import get_repo
 from services import games_service, learning_service as ls
+from services.guide_service import learning_profile, validate_learning_profile
 from validators import clean_text, require
 
 PUBLIC_FIELDS = ("id", "name", "avatar_key", "age", "age_band", "level", "interests", "language", "selected_theme",
-                 "favorite_color", "learning_style", "rug_style", "home_region", "total_points", "created_at")
+                 "favorite_color", "learning_style", "rug_style", "home_region", "learning_profile", "total_points",
+                 "created_at")
 
 # Tables holding one child's data (Supabase also cascades; the memory store needs this list).
 CHILD_TABLES = ("mk_chat_messages", "mk_chat_sessions", "mk_child_answers", "mk_child_progress",
@@ -54,6 +56,8 @@ def validate_child_fields(d, child_id=None):
         region = d["home_region"] or None
         require(region is None or region in REGION_ORDER, "Unknown region")
         patch["home_region"] = region
+    if "learning_profile" in d:  # skills observed by the onboarding mini-challenges
+        patch["learning_profile"] = validate_learning_profile(d["learning_profile"])
     if "selected_theme" in d:
         theme = d["selected_theme"]
         allowed = ls.available_themes(child_id) if child_id else [k for k in THEMES if k != "magic"]
@@ -104,6 +108,7 @@ def child_detail_for_parent(child):
     return {
         **child_card(child),
         "progress": ls.progress_summary(child),
+        "learning_profile": learning_profile(child),
         "rewards": ls.rewards_overview(child),
         "rugs": games_service.list_rugs(child["id"]),
         # Parents can review what their child asked the assistant.

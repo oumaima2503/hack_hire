@@ -10,7 +10,7 @@ interface Msg {
 /** The AI learning assistant. Talks to our backend only (/api/chat); Gemini is called server-side. */
 export function ChatWidget({ inline = false }: { inline?: boolean }) {
   const { childId, exp, focus } = useLearn()
-  const guide = exp.theme.guide
+  const guide = { name: 'MyRugy', emoji: '🧶' } // the MyRugy Guide, whatever the world
   const [open, setOpen] = useState(inline)
   const [messages, setMessages] = useState<Msg[]>([])
   const [text, setText] = useState('')

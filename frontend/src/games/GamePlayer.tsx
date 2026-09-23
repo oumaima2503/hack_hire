@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { api, type GameConfig, type GameResult } from '../api'
+import { GameIntro } from '../guide/GameIntro'
+import { GuideLayer } from '../guide/GuideBuddy'
 import { useLearn } from '../learn/LearnContext'
 import { QuestionRunner } from '../learn/QuestionRunner'
 import { BuildPattern } from './BuildPattern'
@@ -27,13 +29,26 @@ export function GamePlayer({
   const [result, setResult] = useState<GameResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [round, setRound] = useState(0)
+  const [intro, setIntro] = useState(false)
+  const [howTo, setHowTo] = useState(false)
+  const seenKey = `myrugy.intro.${childId}.${gameKey}`
 
   const load = useCallback(() => {
     setConfig(null)
     setResult(null)
     setError(null)
-    api.game(childId, gameKey).then(setConfig, (e) => setError(e.message))
-  }, [childId, gameKey])
+    api.game(childId, gameKey).then((cfg) => {
+      setConfig(cfg)
+      // The MyRugy Guide introduces a game the first time it is opened.
+      let seen = false
+      try {
+        seen = sessionStorage.getItem(seenKey) === '1'
+      } catch {
+        /* ignore */
+      }
+      setIntro(cfg.plays === 0 && !seen)
+    }, (e) => setError(e.message))
+  }, [childId, gameKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(load, [load, round])
 
@@ -48,7 +63,27 @@ export function GamePlayer({
   if (!config) return <p className="loading-dark">…</p>
 
   const v = exp.theme.vocab
+  const endIntro = () => {
+    try {
+      sessionStorage.setItem(seenKey, '1')
+    } catch {
+      /* ignore */
+    }
+    setIntro(false)
+  }
+
+  if (intro) return <GameIntro game={config} prefs={exp.guide} onDone={endIntro} />
+
   return (
+    <GuideLayer game={config} result={result} onHowToPlay={() => setHowTo(true)}>
+    {howTo && (
+      // "How to play" mid-game: an overlay, so the child's game state is kept.
+      <div className="modal-backdrop" role="dialog" aria-modal="true" onClick={() => setHowTo(false)}>
+        <div className="modal intro-modal" onClick={(e) => e.stopPropagation()}>
+          <GameIntro game={config} prefs={{ ...exp.guide, intro_mode: 'demo_first' }} onDone={() => setHowTo(false)} />
+        </div>
+      </div>
+    )}
     <div className="game-player">
       {showIntro && (
         <div className="game-intro">
@@ -99,5 +134,6 @@ export function GamePlayer({
         </div>
       )}
     </div>
+    </GuideLayer>
   )
 }

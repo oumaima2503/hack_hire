@@ -27,6 +27,11 @@ def game_by_key(key):
     return game
 
 
+def process_steps(game, d):
+    """The correct rug-making order for difficulty d (server-side only)."""
+    return game["config"]["steps"][str(d)]
+
+
 def _require_game_unlocked(child, game):
     require(game["lesson_id"] in ls.unlocked_lesson_ids(child["id"]), "Finish the lessons before this game first", 403)
 
@@ -101,7 +106,9 @@ def game_config(child, key):
     v = theme["vocab"]
     base = {"key": game["key"], "type": game["type"], "title": game["title"], "emoji": game["emoji"],
             "difficulty": d, "speed_seconds": ls.speed_seconds(child), "guide": theme["guide"],
-            "reward_emoji": v["point_emoji"], "motifs": theme["motifs"]}
+            "reward_emoji": v["point_emoji"], "motifs": theme["motifs"],
+            # Lets the MyRugy Guide introduce a game the first time it is opened.
+            "plays": next((p["plays"] for p in repo.select("mk_child_game_progress", child_id=child["id"], game_id=game["id"])), 0)}
 
     if game["type"] == "choose_material":
         pool = [q for q in repo.select("mk_questions", kind="material") if q["difficulty"] <= d]

@@ -4,7 +4,7 @@ from flask import Blueprint, g, jsonify
 
 from middleware import get_repo
 from middleware.auth import child_route
-from services import children_service as cs, games_service as games, learning_service as ls
+from services import children_service as cs, games_service as games, guide_service as guide, learning_service as ls
 from validators import json_body, require
 
 bp = Blueprint("learning", __name__, url_prefix="/api/children/<child_id>")
@@ -28,7 +28,14 @@ def patch_child(child_id):
 @bp.get("/experience")
 @child_route
 def experience(child_id):
-    return jsonify(child=cs.child_public(g.child), **ls.experience(g.child))
+    return jsonify(child=cs.child_public(g.child), **ls.experience(g.child),
+                   learning_profile=guide.learning_profile(g.child), guide=guide.guide_prefs(g.child))
+
+
+@bp.get("/learning-profile")
+@child_route
+def learning_profile(child_id):
+    return jsonify(guide.learning_profile(g.child))
 
 
 # ── Lessons ──
@@ -86,6 +93,15 @@ def game(child_id, key):
 @child_route
 def complete_game(child_id, key):
     return jsonify(games.complete_game(g.child, key, json_body()))
+
+
+@bp.post("/games/<key>/hint")
+@child_route
+def game_hint(child_id, key):
+    d = json_body()
+    level = d.get("level")
+    return jsonify(guide.game_hint(g.child, key, level if isinstance(level, int) else 1, d.get("state"),
+                                   question_id=d.get("questionId")))
 
 
 # ── Rug studio ──

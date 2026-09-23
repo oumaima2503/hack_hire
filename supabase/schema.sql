@@ -319,3 +319,9 @@ alter table mk_questions drop constraint if exists mk_questions_kind_check;
 alter table mk_questions add constraint mk_questions_kind_check check (kind in ('quiz', 'material', 'region'));
 
 alter table mk_regions enable row level security;
+-- ═══════════════════════════════════════════════════════════════════
+-- v4 · Learning Profile from the onboarding mini-challenges (idempotent)
+-- {"skills": {"pattern_recognition": "strong|medium|practice", "sequencing": …,
+--             "visual_matching": …, "material_recognition": …}, "assessed_at": "…"}
+-- ═══════════════════════════════════════════════════════════════════
+alter table mk_children add column if not exists learning_profile jsonb;

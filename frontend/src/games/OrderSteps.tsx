@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api, type GameConfig, type GameResult } from '../api'
 import { sfx } from '../fun'
+import { useGuide } from '../guide/GuideContext'
 import { useLearn } from '../learn/LearnContext'
 
 /** Game 4: put the rug-making steps in order (buttons work on touch screens and keyboards). */
@@ -10,6 +11,11 @@ export function OrderSteps({ config, onDone }: { config: GameConfig; onDone: (r:
   const [positions, setPositions] = useState<boolean[] | null>(null)
   const [picked, setPicked] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
+  const guide = useGuide()
+
+  useEffect(() => {
+    guide.setState({ order: steps.map((s) => s.id) })
+  }, [steps]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const move = (from: number, to: number) => {
     if (to < 0 || to >= steps.length) return
@@ -37,7 +43,10 @@ export function OrderSteps({ config, onDone }: { config: GameConfig; onDone: (r:
       const res = await api.completeGame(childId, config.key, { order: steps.map((s) => s.id) })
       setPositions(res.correct_positions ?? null)
       if (res.passed) setTimeout(() => onDone(res), 700)
-      else sfx.oops()
+      else {
+        sfx.oops()
+        guide.report({ type: 'mistake' })
+      }
     } finally {
       setBusy(false)
     }

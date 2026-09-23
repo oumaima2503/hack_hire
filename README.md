@@ -78,6 +78,23 @@ Row-level security is on for every table with no policies, so only the backend's
 | Rug style | Shapes and colours in Build the Pattern and the Rug Studio, design tips |
 | Buddy, interests, language | Avatar and stickers, the funnel adventure and Box, and the assistant's reply language |
 
+## Learning Profile & MyRugy Guide (AI layer on top of the games)
+
+The six games (Choose Materials, Match Tools, Build Pattern, Order Steps, Rug Studio, Challenge) keep their mechanics, content, scoring and progression. The Guide only helps around them (`frontend/src/guide/`, `backend/services/guide_service.py`).
+
+- **Onboarding:** consent → name → age → interests → world → learning style → language → **mini-challenges** → **Learning Profile**. The mini-challenges are onboarding only: one visual puzzle per skill (patterns, sequencing, visual matching, materials), with one retry. The result is saved as `mk_children.learning_profile` and served by `GET /api/children/:id/learning-profile`. Children see an adventure level, what they're good at and what to practise, never a score.
+- **Personalisation (how things are explained, never which game):**
+  - Learning style sets how each game is introduced: Watch = demo first, Listen = spoken, Do = try first.
+  - Age sets how long explanations are and whether they are read aloud.
+  - Skills and repeated mistakes set when the Guide offers help: after 1, 2 or 3 mistakes.
+- **First-time game intro:** goal → a short demo (a hand points if the child hesitates) → a mini try → "Your turn!". Children can replay it with ❔.
+- **During play:**
+  - 💡 progressive hints (`POST /api/children/:id/games/:key/hint`): 1 encouragement, 2 a clue, 3 specific guidance. They are computed from the game engine's own data and never give the answer.
+  - 💬 Ask and optional 🎤 voice (browser speech recognition), answered by the Gemini tutor with the profile and game state.
+  - Reactions to mistakes and successes.
+- **Boundaries:** the Guide never decides correctness, gives rewards or changes game state. The existing engine stays the authority.
+- **Languages:** the Guide's texts are in EN/FR/AR. Lesson and game content is still English.
+
 ## Regional journey across Morocco
 
 The 8-stage course is also a trip through all **12 regions of Morocco** (`backend/services/regions_service.py`).

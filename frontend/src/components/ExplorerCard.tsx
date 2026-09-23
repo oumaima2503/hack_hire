@@ -38,11 +38,11 @@ export function ExplorerCard({ profile, highlight }: { profile: Profile; highlig
               : '?'}
           </dd>
         </div>
-        <div className={slot(6, !!profile.level)}>
+        <div className={slot(7, !!profile.level)}>
           <dt>{t('card_level')}</dt>
           <dd>{profile.level ? `${'★'.repeat(profile.level)}${'☆'.repeat(3 - profile.level)} ${t(`level_${profile.level}` as I18nKey)}` : '?'}</dd>
         </div>
-        <div className={slot(7, !!profile.language)}>
+        <div className={slot(6, !!profile.language)}>
           <dt>{t('card_language')}</dt>
           <dd>{profile.language ? `${LANG_FLAGS[profile.language]} ${LANG_NAMES[profile.language]}` : '?'}</dd>
         </div>

@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api, type GameConfig, type GameResult, type PatternCell } from '../api'
 import { sfx } from '../fun'
+import { useGuide } from '../guide/GuideContext'
 import { useLearn } from '../learn/LearnContext'
 
 /** Game 3: copy the target pattern (repeating, or mirror symmetry for masters). */
@@ -14,6 +15,11 @@ export function BuildPattern({ config, onDone }: { config: GameConfig; onDone: (
   const [cells, setCells] = useState<(PatternCell | null)[]>(() => target.map(() => null))
   const [positions, setPositions] = useState<boolean[] | null>(null)
   const [busy, setBusy] = useState(false)
+  const guide = useGuide()
+
+  useEffect(() => {
+    guide.setState({ seed: config.seed, cells })
+  }, [cells]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const paint = (i: number) => {
     sfx.pop()
@@ -27,7 +33,10 @@ export function BuildPattern({ config, onDone }: { config: GameConfig; onDone: (
       const res = await api.completeGame(childId, config.key, { seed: config.seed, cells })
       setPositions(res.correct_positions ?? null)
       if (res.passed) setTimeout(() => onDone(res), 700)
-      else sfx.oops()
+      else {
+        sfx.oops()
+        guide.report({ type: 'mistake' })
+      }
     } finally {
       setBusy(false)
     }

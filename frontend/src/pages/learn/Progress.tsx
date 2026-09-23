@@ -3,6 +3,7 @@ import { api, type ProgressSummary, type Rug } from '../../api'
 import { RugView } from '../../components/RugView'
 import { REASON_LABELS, useLearn } from '../../learn/LearnContext'
 import { RegionPassport } from '../../learn/RegionMap'
+import { LearningProfileCard } from '../../components/LearningProfileCard'
 
 export function StatTiles({ s, pointEmoji = '⭐', pointsLabel = 'points', levelLabel = 'Level' }: {
   s: ProgressSummary['stats']
@@ -51,6 +52,16 @@ export default function Progress() {
     <div className="learn-page">
       <h1>{exp.theme.icons.progress} My progress</h1>
       <StatTiles s={data.stats} pointEmoji={v.point_emoji} pointsLabel={v.points} levelLabel={v.level} />
+
+      <section className="card">
+        <h2>🌟 How I like to learn</h2>
+        <LearningProfileCard
+          level={exp.learning_profile.level}
+          learningStyle={exp.child.learning_style ?? 'watch'}
+          language={exp.child.language ?? 'en'}
+          skills={exp.learning_profile.skills}
+        />
+      </section>
 
       <section className="card">
         <h2>🛂 My Morocco passport</h2>

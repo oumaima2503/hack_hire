@@ -407,3 +407,57 @@ def test_regions_visited_unlock_colours_and_achievement(app):
     studio = c.get(f"/api/children/{cid}/games/create_rug").json["studio"]
     assert "#6a994e" in studio["palette"] and "🌳" in studio["motifs"]  # Souss-Massa colour + emblem
     assert len(c.get(f"/api/parents/children/{cid}").json["progress"]["regions"]["route"]) == 12
+
+# ───────── MyRugy Guide: learning profile, prefs, progressive hints ─────────
+
+def test_learning_profile_and_guide_prefs(app):
+    c = register(app)
+    cid = make_child(c, learning_style="do", age=10)
+    skills = {"pattern_recognition": "strong", "sequencing": "practice", "visual_matching": "medium", "material_recognition": "strong"}
+    assert c.patch(f"/api/children/{cid}", {"learning_profile": {"skills": {"sequencing": "genius"}}}).status_code == 400
+    assert c.patch(f"/api/children/{cid}", {"learning_profile": {"skills": skills}}).status_code == 200
+    p = c.get(f"/api/children/{cid}/learning-profile").json
+    assert p["skills"] == skills and p["learning_style"] == "Do" and p["assessed"] and p["adventure_level"] == "Beginner"
+    assert "score" not in str(p).lower()
+    exp = c.get(f"/api/children/{cid}/experience").json
+    g = exp["guide"]
+    assert g["name"] == "MyRugy" and g["intro_mode"] == "try_first" and g["verbosity"] == "detailed"
+    assert g["support"]["order_steps"] == "extra" and g["support"]["build_pattern"] == "light"
+    assert exp["learning_profile"]["skills"] == skills
+
+
+def test_progressive_hints_never_reveal_answers(app):
+    c = register(app)
+    cid = make_child(c, level=2, language="fr")
+    for key in ["discover", "materials", "tools", "design", "weaving", "create", "challenges"]:
+        c.post(f"/api/children/{cid}/lessons/{key}/complete")
+    hint = lambda key, level, **body: c.post(f"/api/children/{cid}/games/{key}/hint", {"level": level, **body}).json  # noqa: E731
+
+    assert hint("order_steps", 1)["text"]  # encouragement, in French
+    cfg = c.get(f"/api/children/{cid}/games/order_steps").json
+    assert cfg["plays"] == 0
+    h3 = hint("order_steps", 3, state={"order": [s["id"] for s in cfg["steps"]]})
+    assert "place" in h3["text"] and h3["level"] == 3  # one placement, the child still orders the rest
+
+    mat = c.get(f"/api/children/{cid}/games/choose_material").json["questions"][0]
+    h2 = hint("choose_material", 2, questionId=mat["id"])
+    h3 = hint("choose_material", 3, questionId=mat["id"])
+    answer = next(q["answer"] for q in app.extensions["repo"].select("mk_questions", id=mat["id"]))
+    assert h2["text"].startswith("Indice") and answer not in h3["text"].replace("Ce n'est pas", "")
+
+    pat = c.get(f"/api/children/{cid}/games/build_pattern").json
+    assert "case 1" in hint("build_pattern", 3, state={"seed": pat["seed"], "cells": []})["text"]
+    assert c.post(f"/api/children/{cid}/games/build_pattern/complete", {"seed": pat["seed"], "cells": pat["target"]}).json["passed"]
+    assert c.get(f"/api/children/{cid}/games/build_pattern").json["plays"] == 1
+
+    other = make_child(c)
+    assert c.post(f"/api/children/{other}/games/order_steps/hint", {"level": 2}).status_code == 403  # still locked
+
+
+def test_onboarding_profile_step_and_chat_game_state(app):
+    c = register(app)
+    cid = make_child(c)
+    assert c.post("/api/events", {"session_id": "s", "event_name": "step_viewed", "step": 8}).status_code == 201
+    r = c.post("/api/chat", {"childId": cid, "message": "help", "gameKey": "order_steps",
+                             "gameState": {"mistakes": 3, "hints": "x", "note": "<b>stuck</b>"}})
+    assert r.status_code == 200 and r.json["guide"]["name"] == "MyRugy"

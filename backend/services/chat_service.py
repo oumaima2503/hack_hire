@@ -17,7 +17,14 @@ HISTORY_TURNS = 8
 SESSION_TTL = timedelta(hours=6)
 
 
-def _context(child, lesson_key=None, game_key=None, question_id=None):
+def _game_state(value):
+    """Untrusted, informational only: how the child is doing in the current game."""
+    value = value if isinstance(value, dict) else {}
+    num = lambda k: max(0, min(int(value.get(k) or 0), 99)) if str(value.get(k) or 0).isdigit() else 0  # noqa: E731
+    return {"mistakes": num("mistakes"), "hints": num("hints"), "note": clean_text(value.get("note"), 160)}
+
+
+def _context(child, lesson_key=None, game_key=None, question_id=None, game_state=None):
     repo = get_repo()
     theme = ls.theme_for(child)
     overview = ls.lessons_overview(child)
@@ -43,6 +50,8 @@ def _context(child, lesson_key=None, game_key=None, question_id=None):
         "next_lesson": nxt["title"] if nxt else None, "points": s["total_points"], "xp_level": s["xp_level"],
         "regions_now": [f"{r['name']} ({r['style']})" for r in (rs.lesson_regions(child, lesson_key) if lesson_key else trip["current"])],
         "regions_visited": [r["name"] for r in trip["route"] if r["status"] == "visited"],
+        "skills": ((child.get("learning_profile") or {}).get("skills") or {}),
+        "game_state": _game_state(game_state),
     }
 
 
@@ -50,8 +59,12 @@ def build_system_prompt(ctx):
     t, v = ctx["theme"], ctx["theme"]["vocab"]
     max_sentences = 2 if ctx["age_band"] == "3-5" else 4 if ctx["age_band"] == "6-8" else 5
     lines = [
-        f"You are {t['guide']['name']} {t['guide']['emoji']}, a warm, patient guide in MyRugy Kids, an app that teaches "
-        "children how traditional Moroccan rugs are made (materials, tools, design, weaving, finishing, symbols).",
+        "You are MyRugy, the friendly guide of MyRugy Kids (a little woven rug with a smiling face), an app that "
+        "teaches children how traditional Moroccan rugs are made (materials, tools, design, weaving, finishing, symbols). "
+        f"The child is currently exploring the {t['name']} world with {t['guide']['name']} {t['guide']['emoji']}.",
+        "You are a companion and tutor INSIDE the existing games: you explain, demonstrate with words, give hints, "
+        "answer questions and encourage. You never play for the child, never decide if an answer is right, never "
+        "change the game or its rules, never promise rewards, and never choose which game to play.",
         "RULES:",
         f"- The learner is a child aged {ctx['age'] or ctx['age_band']} (difficulty: "
         f"{['', 'beginner', 'explorer', 'master'][ctx['difficulty']]}). Use very simple words and at most "
@@ -67,6 +80,8 @@ def build_system_prompt(ctx):
         "tell them to talk to a grown-up they trust.",
         "- Be encouraging. Praise effort. Explain mistakes kindly. End with a small question or a next step when useful.",
         "- Plain text only, no markdown. Emojis are fine (at most 2).",
+        "- Adapt: after one mistake say it is almost there; after repeated mistakes make it simpler (focus on one "
+        "small part); after success, celebrate what they noticed. Never make the child feel bad.",
     ]
     if ctx["question"]:
         q = ctx["question"]
@@ -89,6 +104,13 @@ def build_system_prompt(ctx):
         info.append(f"Suggested next lesson: {ctx['next_lesson']}")
     if ctx["regions_now"]:
         info.append(f"Current Moroccan region(s) on their journey: {', '.join(ctx['regions_now'])}. Use this region's weaving style in examples.")
+    if ctx["skills"]:
+        good = [k.replace("_", " ") for k, v in ctx["skills"].items() if v == "strong"]
+        practise = [k.replace("_", " ") for k, v in ctx["skills"].items() if v == "practice"]
+        info.append(f"Strengths: {', '.join(good) or 'still discovering'}; practising: {', '.join(practise) or 'nothing special'}")
+    gs = ctx["game_state"]
+    if ctx["game"] and (gs["mistakes"] or gs["hints"]):
+        info.append(f"In this game so far: {gs['mistakes']} mistake(s), {gs['hints']} hint(s) used. {gs['note']}".strip())
     if ctx["regions_visited"]:
         info.append(f"Regions already visited: {', '.join(ctx['regions_visited'])}")
     lines += ["CHILD CONTEXT:", *(f"- {i}" for i in info)]
@@ -131,7 +153,7 @@ def _session(child, lesson_key):
     return repo.insert("mk_chat_sessions", {"child_id": child["id"], "lesson_key": lesson_key})
 
 
-def reply(child, message, lesson_key=None, game_key=None, question_id=None):
+def reply(child, message, lesson_key=None, game_key=None, question_id=None, game_state=None):
     repo = get_repo()
     message = clean_text(message, 500)
     require(message, "Type a question first")
@@ -139,7 +161,7 @@ def reply(child, message, lesson_key=None, game_key=None, question_id=None):
         ls.lesson_by_key(lesson_key)  # 404 on unknown keys
     if game_key is not None:
         game_by_key(game_key)
-    ctx = _context(child, lesson_key, game_key, question_id)
+    ctx = _context(child, lesson_key, game_key, question_id, game_state)
     session = _session(child, lesson_key)
     history = sorted(repo.select("mk_chat_messages", session_id=session["id"]), key=lambda m: m["created_at"])
     history = [{"role": m["role"], "content": m["content"]} for m in history[-HISTORY_TURNS * 2:]]
@@ -156,7 +178,7 @@ def reply(child, message, lesson_key=None, game_key=None, question_id=None):
 
     repo.insert("mk_chat_messages", {"session_id": session["id"], "child_id": child["id"], "role": "user", "content": safe_message})
     repo.insert("mk_chat_messages", {"session_id": session["id"], "child_id": child["id"], "role": "assistant", "content": answer})
-    return {"reply": answer, "source": source, "guide": ctx["theme"]["guide"]}
+    return {"reply": answer, "source": source, "guide": {"name": "MyRugy", "emoji": "🧶"}}
 
 
 def history(child, lesson_key=None):

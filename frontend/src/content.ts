@@ -89,30 +89,51 @@ export const REGIONS: { key: string; name: string; emoji: string }[] = [
 export const AGES = [3, 4, 5, 6, 7, 8, 9, 10, 11]
 export const ageBand = (age: number): AgeBand => (age <= 5 ? '3-5' : age <= 8 ? '6-8' : '9-11')
 
+export type SkillKey = 'pattern_recognition' | 'sequencing' | 'visual_matching' | 'material_recognition'
+
 export interface Challenge {
+  skill: SkillKey // what this mini-challenge observes (onboarding only, never a game)
   prompt: string // i18n key
   visual: string
   options: string[]
   answer: string
 }
 
-// Two or three short in-game challenges, calibrated per age band (D1.4, step 4).
+// Onboarding mini-assessment: one playful, visual item per skill, calibrated per age band.
 export const CHALLENGES: Record<AgeBand, Challenge[]> = {
   '3-5': [
-    { prompt: 'ch_count_camels', visual: '🐪 🐪 🐪', options: ['2', '3', '4'], answer: '3' },
-    { prompt: 'ch_next', visual: '🔴 🔵 🔴 🔵 🔴 ❓', options: ['🔴', '🔵', '🟢'], answer: '🔵' },
-    { prompt: 'ch_star', visual: '', options: ['🔺', '⭐', '🟦'], answer: '⭐' },
+    { skill: 'pattern_recognition', prompt: 'ch_next', visual: '🔴 🔵 🔴 🔵 🔴 ❓', options: ['🔴', '🔵', '🟢'], answer: '🔵' },
+    { skill: 'sequencing', prompt: 'ch_first', visual: '🐔  🐣  🥚', options: ['🥚', '🐣', '🐔'], answer: '🥚' },
+    { skill: 'visual_matching', prompt: 'ch_same', visual: '⭐', options: ['🔺', '⭐', '🟦'], answer: '⭐' },
+    { skill: 'material_recognition', prompt: 'ch_soft', visual: '', options: ['🐑', '🪨', '🔩'], answer: '🐑' },
   ],
   '6-8': [
-    { prompt: 'ch_next', visual: '◆ ◇ ◇ ◆ ◇ ◇ ◆ ❓', options: ['◆', '◇', '●'], answer: '◇' },
-    { prompt: 'ch_knots_rows', visual: '🧶🧶🧶 × 4', options: ['7', '12', '10'], answer: '12' },
-    { prompt: 'ch_mix', visual: '🔵 + 🟡 = ❓', options: ['🟢', '🟣', '🟠'], answer: '🟢' },
+    { skill: 'pattern_recognition', prompt: 'ch_next', visual: '◆ ◇ ◇ ◆ ◇ ◇ ◆ ❓', options: ['◆', '◇', '●'], answer: '◇' },
+    { skill: 'sequencing', prompt: 'ch_first', visual: '🍎  🌳  🌱', options: ['🌱', '🌳', '🍎'], answer: '🌱' },
+    { skill: 'visual_matching', prompt: 'ch_same', visual: '🔷', options: ['🔶', '🔷', '🟦'], answer: '🔷' },
+    { skill: 'material_recognition', prompt: 'ch_sheep', visual: '🐑 ➜ ❓', options: ['🧶', '🪵', '🧊'], answer: '🧶' },
   ],
   '9-11': [
-    { prompt: 'ch_next', visual: '2 · 4 · 8 · 16 · ❓', options: ['24', '32', '20'], answer: '32' },
-    { prompt: 'ch_knots_grid', visual: '▦  6 × 4', options: ['10', '24', '20'], answer: '24' },
-    { prompt: 'ch_symmetry', visual: '◢ ┃ ❓', options: ['◣', '◢', '◤'], answer: '◣' },
+    { skill: 'pattern_recognition', prompt: 'ch_next', visual: '2 · 4 · 8 · 16 · ❓', options: ['24', '32', '20'], answer: '32' },
+    { skill: 'sequencing', prompt: 'ch_rug_first', visual: '🪢  🌈  🐑', options: ['🐑', '🌈', '🪢'], answer: '🐑' },
+    { skill: 'visual_matching', prompt: 'ch_symmetry', visual: '◢ ┃ ❓', options: ['◣', '◢', '◤'], answer: '◣' },
+    { skill: 'material_recognition', prompt: 'ch_blue_dye', visual: '🔵 🧶', options: ['🪻', '🧂', '🪨'], answer: '🪻' },
   ],
 }
 
-export const levelFromScore = (correct: number): 1 | 2 | 3 => (correct >= 3 ? 3 : correct === 2 ? 2 : 1)
+/** first try → strong · second try → medium · otherwise → something to practise together */
+export const skillFromTries = (correctOnTry: number | null): 'strong' | 'medium' | 'practice' =>
+  correctOnTry === 1 ? 'strong' : correctOnTry === 2 ? 'medium' : 'practice'
+
+/** Adventure level from the skills (never shown as a score). */
+export const levelFromSkills = (skills: Record<string, string>): 1 | 2 | 3 => {
+  const points = Object.values(skills).reduce((n, s) => n + (s === 'strong' ? 2 : s === 'medium' ? 1 : 0), 0)
+  return points >= 7 ? 3 : points >= 4 ? 2 : 1
+}
+
+export const SKILL_EMOJI: Record<SkillKey, string> = {
+  pattern_recognition: '🔷',
+  sequencing: '🔢',
+  visual_matching: '🧩',
+  material_recognition: '🐑',
+}

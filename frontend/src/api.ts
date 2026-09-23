@@ -22,7 +22,33 @@ export interface Child {
   learning_style: 'watch' | 'listen' | 'do' | null
   rug_style: string | null
   home_region: string | null
+  learning_profile?: { skills: Partial<Record<Skill, SkillLevel>>; assessed_at?: string } | null
   total_points: number
+}
+
+export type Skill = 'pattern_recognition' | 'sequencing' | 'visual_matching' | 'material_recognition'
+export type SkillLevel = 'strong' | 'medium' | 'practice'
+
+/** Structured Learning Profile (friendly labels only, never a score). */
+export interface LearningProfile {
+  age: number | null
+  level: number
+  adventure_level: string
+  interests: string[]
+  learning_style: string
+  language: string
+  skills: Partial<Record<Skill, SkillLevel>>
+  assessed: boolean
+}
+
+/** How the MyRugy Guide presents things for this child. */
+export interface GuidePrefs {
+  name: string
+  language: Lang
+  intro_mode: 'demo_first' | 'talk_first' | 'try_first'
+  auto_speak: boolean
+  verbosity: 'short' | 'normal' | 'detailed'
+  support: Record<string, 'extra' | 'normal' | 'light'>
 }
 
 export interface Proposal {
@@ -145,6 +171,8 @@ export interface Experience {
   progress: Stats
   next_lesson: LessonSummary | null
   regions: Journey
+  learning_profile: LearningProfile
+  guide: GuidePrefs
   available_themes: { key: string; name: string; emoji: string }[]
 }
 
@@ -250,6 +278,7 @@ export interface GameConfig {
   guide: { name: string; emoji: string }
   reward_emoji: string
   motifs: string[]
+  plays: number
   questions?: Question[]
   tools?: { tool: string; emoji: string }[]
   purposes?: string[]
@@ -311,6 +340,7 @@ export interface ChildCard extends Child {
 }
 
 export interface ChildDetail extends ChildCard {
+  learning_profile: LearningProfile
   progress: ProgressSummary
   rewards: RewardsOverview
   rugs: Rug[]
@@ -389,13 +419,23 @@ export const api = {
   games: (id: string) => call<GameSummary[]>('GET', `${c(id)}/games`),
   game: (id: string, key: string) => call<GameConfig>('GET', `${c(id)}/games/${key}`),
   completeGame: (id: string, key: string, payload: object) => call<GameResult>('POST', `${c(id)}/games/${key}/complete`, payload),
+  hint: (id: string, key: string, level: number, state: object, questionId?: string) =>
+    call<{ level: number; text: string; focus?: number }>('POST', `${c(id)}/games/${key}/hint`, { level, state, questionId }),
+  learningProfile: (id: string) => call<LearningProfile>('GET', `${c(id)}/learning-profile`),
   rugs: (id: string) => call<Rug[]>('GET', `${c(id)}/rugs`),
   saveRug: (id: string, name: string, design: RugDesign) => call<{ rug: Rug; award: Award | null }>('POST', `${c(id)}/rugs`, { name, design }),
   rewards: (id: string) => call<RewardsOverview>('GET', `${c(id)}/rewards`),
   progress: (id: string) => call<ProgressSummary>('GET', `${c(id)}/progress`),
 
   // assistant
-  chat: (b: { childId: string; message: string; lessonId?: string; gameKey?: string; questionId?: string }) =>
+  chat: (b: {
+    childId: string
+    message: string
+    lessonId?: string
+    gameKey?: string
+    questionId?: string
+    gameState?: { mistakes: number; hints: number; note?: string }
+  }) =>
     call<ChatReply>('POST', '/chat', b),
   chatHistory: (childId: string, lessonId?: string) =>
     call<{ role: 'user' | 'assistant'; content: string }[]>(

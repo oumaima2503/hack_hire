@@ -6,6 +6,7 @@ import { RugView } from '../../components/RugView'
 import { avatarEmoji } from '../../content'
 import { REASON_LABELS } from '../../learn/LearnContext'
 import { RegionPassport } from '../../learn/RegionMap'
+import { LearningProfileCard } from '../../components/LearningProfileCard'
 import { StatTiles } from '../learn/Progress'
 
 export default function ChildDetail() {
@@ -46,6 +47,18 @@ export default function ChildDetail() {
         <section className="panel">
           <StatTiles s={d.stats} />
           {d.progress.quiz_accuracy !== null && <p className="hint">🎯 Quiz accuracy: {Math.round(d.progress.quiz_accuracy * 100)}%</p>}
+        </section>
+
+        <section className="panel">
+          <h2>🌟 Learning profile</h2>
+          <p className="hint">
+            From the onboarding mini-challenges. The MyRugy Guide uses it to adapt how it explains things. It never changes the games.
+          </p>
+          {d.learning_profile.assessed ? (
+            <LearningProfileCard level={d.learning_profile.level} learningStyle={d.learning_style ?? 'watch'} language={d.language ?? 'en'} skills={d.learning_profile.skills} />
+          ) : (
+            <p className="muted">Not assessed yet. It will appear after the onboarding mini-challenges.</p>
+          )}
         </section>
 
         <section className="panel">

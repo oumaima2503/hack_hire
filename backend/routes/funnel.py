@@ -18,7 +18,7 @@ EVENTS = {
     "landing_viewed", "step_viewed", "onboarding_started", "consent_declined", "onboarding_completed",
     "result_viewed", "checkout_started", "order_confirmed", "rating_submitted",
 }
-MAX_STEP = 7
+MAX_STEP = 8
 # D1.2 thresholds [to confirm with My Rugy]
 THRESHOLDS = {"relevance_gap": 1.0, "completion_rate": 0.70, "min_testers": 5, "min_runs": 10}
 FUNNEL = [
@@ -30,8 +30,9 @@ FUNNEL = [
     ("step_viewed", 3, "Step 3 · islands"),
     ("step_viewed", 4, "Step 4 · world + colour"),
     ("step_viewed", 5, "Step 5 · learning + rug style"),
-    ("step_viewed", 6, "Step 6 · mini-challenges"),
-    ("step_viewed", 7, "Step 7 · language"),
+    ("step_viewed", 6, "Step 6 · language"),
+    ("step_viewed", 7, "Step 7 · mini-challenges"),
+    ("step_viewed", 8, "Step 8 · learning profile"),
     ("onboarding_completed", None, "Onboarding completed"),
     ("result_viewed", None, "Adventure proposal viewed"),
     ("checkout_started", None, "Checkout started"),

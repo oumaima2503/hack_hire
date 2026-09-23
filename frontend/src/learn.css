@@ -670,3 +670,81 @@ button.stamp-card:hover { transform: scale(1.04) rotate(0deg); }
   .flow-steps li:not(:last-child)::after { flex-basis: 8px; }
   .screen { aspect-ratio: 4 / 3; }
 }
+/* ═════════ MyRugy Guide (AI layer on top of the existing games) ═════════ */
+.guide { position: fixed; left: 16px; bottom: 16px; z-index: 45; display: grid; gap: 8px; max-width: min(420px, calc(100vw - 32px)); pointer-events: auto; }
+.guide-body { display: flex; align-items: flex-end; gap: 8px; }
+.guide-avatar { position: relative; flex: none; width: 74px; height: 80px; border: 0; background: rgba(255, 255, 255, .92); border-radius: 22px; box-shadow: 0 10px 24px rgba(0, 0, 0, .3); display: grid; place-items: center; cursor: pointer; }
+.guide-avatar .rugy-svg { animation: bob 3s ease-in-out infinite; }
+.guide-speaking .guide-avatar .rugy-svg { animation: talk .35s ease-in-out infinite alternate; }
+.guide-celebrating .guide-avatar .rugy-svg { animation: rugy-jump .7s ease-out infinite; }
+.guide-listening .guide-avatar { box-shadow: 0 0 0 4px #e53935, 0 10px 24px rgba(0, 0, 0, .3); animation: glow 1.2s ease-in-out infinite; }
+.guide-hint .guide-avatar { box-shadow: 0 0 0 4px var(--t-secondary, var(--saffron)), 0 10px 24px rgba(0, 0, 0, .3); }
+@keyframes talk { from { transform: scaleY(1); } to { transform: scaleY(.94) translateY(2px); } }
+.guide-badge { position: absolute; top: -8px; right: -8px; background: #fff; border-radius: 999px; padding: 2px 6px; font-size: 16px; box-shadow: 0 2px 6px rgba(0, 0, 0, .2); }
+.guide-badge.dots { font-weight: 900; letter-spacing: 1px; animation: glow 1s infinite; }
+.guide-wave { position: absolute; top: -10px; right: -6px; font-size: 20px; animation: wave 1.6s ease-in-out infinite; transform-origin: 70% 80%; }
+.guide-bubble { position: relative; margin: 0; background: #fff; color: #2a1a10; border-radius: 18px 18px 18px 4px; padding: 10px 40px 10px 14px; font-weight: 700; font-size: 15px; line-height: 1.45; box-shadow: 0 10px 24px rgba(0, 0, 0, .25); animation: pop .3s ease-out; max-height: 40vh; overflow-y: auto; }
+.guide-explaining .guide-bubble { border-left: 5px solid var(--t-secondary, var(--saffron)); }
+.guide-hint .guide-bubble { background: #fff8dc; border-left: 5px solid #f3b04a; }
+.guide-celebrating .guide-bubble { background: #e9f9ee; }
+.guide-mini { position: absolute; right: 8px; top: 8px; border: 0; background: #ffe7d4; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: 13px; }
+.guide-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.guide-btn { border: 0; border-radius: 999px; padding: 9px 14px; min-height: 44px; font-weight: 900; font-size: 14px; background: rgba(255, 255, 255, .95); color: #2a1a10; box-shadow: 0 6px 14px rgba(0, 0, 0, .22); cursor: pointer; }
+.guide-btn:hover { transform: translateY(-2px); }
+.guide-btn.glow { background: #fff1b8; animation: ready-pulse 1.2s ease-in-out infinite; }
+.guide-btn.live { background: #e53935; color: #fff; }
+.guide-offer { margin: 0; background: #fff1b8; color: #6b3b00; border-radius: 12px; padding: 6px 10px; font-weight: 800; font-size: 13px; justify-self: start; animation: pop .3s ease-out; }
+.guide-ask { display: flex; gap: 6px; background: #fff; padding: 6px; border-radius: 999px; box-shadow: 0 8px 18px rgba(0, 0, 0, .25); }
+.guide-ask input { flex: 1; min-width: 0; border: 0; outline: none; padding: 8px 12px; font: inherit; font-weight: 700; border-radius: 999px; }
+.game-player { padding-bottom: 150px; } /* room so the Guide never covers the game's buttons */
+
+/* First-time game introduction */
+.game-intro-card { display: grid; gap: 16px; justify-items: center; text-align: center; padding: 8px; animation: rise-in .35s ease-out; }
+.intro-guide { display: flex; align-items: center; gap: 12px; text-align: start; }
+.intro-guide .bubble { font-size: 17px; }
+.intro-goal { display: grid; gap: 10px; justify-items: center; }
+.intro-goal strong { font-family: var(--head); font-size: 24px; }
+.intro-game-emoji { font-size: 72px; animation: pop .5s ease-out, bob 3s ease-in-out .5s infinite; }
+.intro-demo { display: grid; gap: 12px; justify-items: center; width: 100%; }
+.intro-visual { margin: 0; font-size: clamp(30px, 6vw, 44px); letter-spacing: 6px; background: rgba(0, 0, 0, .04); border-radius: 18px; padding: 10px 18px; }
+.intro-options { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.intro-options .option { position: relative; min-width: 96px; min-height: 64px; font-size: 26px; }
+.intro-hand { position: absolute; bottom: -26px; left: 50%; font-size: 30px; transform: translateX(-50%); animation: point 1s ease-in-out infinite; pointer-events: none; }
+@keyframes point { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -10px); } }
+.intro-footer { display: flex; gap: 14px; align-items: center; }
+.center-row { justify-content: center; }
+.intro-modal { width: min(560px, 100%); }
+
+/* Learning Profile (onboarding result, progress, parent) */
+.profile-step { display: grid; gap: 14px; }
+.profile-hero { display: flex; align-items: center; gap: 10px; justify-content: center; font-family: var(--head); font-size: 26px; }
+.profile-buddy { font-size: 52px; animation: wave 1.4s ease-in-out infinite; transform-origin: 70% 80%; }
+.profile-card { display: grid; gap: 12px; }
+.profile-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.profile-tile { background: var(--white, #fff); border: 2px solid var(--sand, #e8d3b0); border-radius: 18px; padding: 12px; display: grid; justify-items: center; text-align: center; gap: 2px; }
+.learn .profile-tile { background: color-mix(in srgb, var(--t-surface) 70%, white); border-color: color-mix(in srgb, var(--t-primary) 30%, white); }
+.profile-emoji { font-size: 26px; }
+.profile-tile small { font-weight: 800; opacity: .7; font-size: 12px; }
+.profile-tile strong { font-family: var(--head); font-size: 18px; }
+.profile-skills { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.skill-group { border-radius: 18px; padding: 12px; display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; }
+.skill-group.good { background: #e9f9ee; }
+.skill-group.practise { background: #fff4dc; }
+.skill-title { width: 100%; margin: 0 0 2px; font-weight: 900; color: #2a1a10; }
+.skill-chip { background: #fff; color: #2a1a10; border-radius: 999px; padding: 6px 12px; font-weight: 800; font-size: 14px; box-shadow: 0 2px 0 rgba(0, 0, 0, .08); }
+.soft-chip { opacity: .75; font-weight: 700; }
+.skill-row { display: flex; gap: 10px; justify-content: center; font-size: 30px; margin: 4px 0 8px; }
+.skill-dot { width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; background: #f1f1f1; }
+.skill-dot.strong { background: #d9f2df; box-shadow: 0 0 0 3px #3fa45a; }
+.skill-dot.medium { background: #fff1c9; box-shadow: 0 0 0 3px #f3b04a; }
+.skill-dot.practice { background: #fde8dc; box-shadow: 0 0 0 3px #f0a37f; }
+.bubble-speak.inline { position: static; transform: none; margin-inline-start: 8px; vertical-align: middle; }
+
+@media (max-width: 900px) { .guide { bottom: 84px; left: 10px; } }
+@media (max-width: 640px) {
+  .guide-avatar { width: 60px; height: 66px; }
+  .guide-avatar .rugy-svg { width: 44px; height: 48px; }
+  .guide-btn { padding: 8px 11px; font-size: 13px; }
+  .profile-tiles { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .profile-skills { grid-template-columns: 1fr; }
+}

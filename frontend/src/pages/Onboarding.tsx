@@ -4,18 +4,20 @@ import { api, type AgeBand, type Lang } from '../api'
 import { useAuth } from '../auth'
 import { AuthForms } from '../components/AuthForms'
 import { ExplorerCard } from '../components/ExplorerCard'
+import { LearningProfileCard } from '../components/LearningProfileCard'
 import { Layout } from '../components/Layout'
 import { Rugy, type Mood } from '../components/Rugy'
 import {
-  AGES, AVATARS, CHALLENGES, FAVORITE_COLORS, ISLANDS, LEARNING_STYLES, REGIONS, RUG_STYLES, WORLDS, ageBand, avatarEmoji, levelFromScore,
+  AGES, AVATARS, CHALLENGES, FAVORITE_COLORS, ISLANDS, LEARNING_STYLES, REGIONS, RUG_STYLES, SKILL_EMOJI, WORLDS, ageBand, avatarEmoji, levelFromSkills, skillFromTries,
 } from '../content'
 import { confetti, confettiFrom, sfx, speak, stopSpeaking } from '../fun'
 import { LANG_FLAGS, LANG_NAMES, useI18n, type I18nKey } from '../i18n'
 import { useSession, useTrack } from '../state'
 
-const STOPS = ['🔑', '🧭', '🎂', '🏝️', '🌍', '🎨', '🧩', '💬']
-const RUGY_LINES: I18nKey[] = ['s0_rugy', 's1_rugy', 's2_rugy', 's3_rugy', 'sw_rugy', 'sl_rugy', 's4_rugy', 's5_rugy']
-const TITLES: I18nKey[] = ['s0_title', 's1_title', 's2_title', 's3_title', 'sw_title', 'sl_title', 's4_title', 's5_title']
+const STOPS = ['🔑', '🧭', '🎂', '🏝️', '🌍', '🎨', '💬', '🧩', '🌟']
+// 0 consent · 1 name · 2 age · 3 interests · 4 world · 5 learning style · 6 language · 7 mini-challenges · 8 learning profile
+const RUGY_LINES: I18nKey[] = ['s0_rugy', 's1_rugy', 's2_rugy', 's3_rugy', 'sw_rugy', 'sl_rugy', 's5_rugy', 's4_rugy', 'pr_rugy']
+const TITLES: I18nKey[] = ['s0_title', 's1_title', 's2_title', 's3_title', 'sw_title', 'sl_title', 's5_title', 's4_title', 'pr_title']
 
 export default function Onboarding() {
   const { session, update, reset } = useSession()
@@ -112,8 +114,9 @@ export default function Onboarding() {
             {step === 3 && <StepIslands {...props} />}
             {step === 4 && <StepWorld {...props} />}
             {step === 5 && <StepStyle {...props} />}
-            {step === 6 && <StepChallenges {...props} />}
-            {step === 7 && <StepLanguage {...props} />}
+            {step === 6 && <StepLanguage {...props} />}
+            {step === 7 && <StepChallenges {...props} />}
+            {step === 8 && <StepProfile />}
           </div>
           {error && (
             <p className="error" role="alert">
@@ -570,117 +573,16 @@ function StepStyle({ busy, save, goBack }: StepProps) {
   )
 }
 
-function StepChallenges({ busy, save, goBack, setMood }: StepProps) {
-  const { t } = useI18n()
-  const { session, update, updateProfile } = useSession()
-  const challenges = CHALLENGES[(session.profile.age_band ?? '6-8') as AgeBand]
-  const [index, setIndex] = useState(0)
-  const [correct, setCorrect] = useState(0)
-  const [feedback, setFeedback] = useState<{ choice: string; ok: boolean } | null>(null)
-  const done = index >= challenges.length
-  const level = levelFromScore(correct)
-
-  const answer = (choice: string, el: HTMLElement) => {
-    if (feedback) return
-    const ok = choice === challenges[index].answer
-    setFeedback({ choice, ok })
-    if (ok) {
-      sfx.yay()
-      confettiFrom(el)
-      setCorrect((c) => c + 1)
-      setMood('wow')
-    } else {
-      sfx.oops()
-      setMood('think')
-    }
-    setTimeout(() => {
-      setFeedback(null)
-      setMood('happy')
-      setIndex((i) => i + 1)
-    }, 1200)
-  }
-
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    save(async () => {
-      await api.updateChild(session.childId!, { level })
-      updateProfile({ level })
-      update({ step: 7 })
-    })
-  }
-
-  if (done) {
-    return (
-      <form onSubmit={submit} className="level-reveal">
-        <div className="confetti" aria-hidden="true">🎉</div>
-        <p className="muted">{t('s4_level')}</p>
-        <h2 className="level-name">
-          <span className="stars">{'★'.repeat(level)}{'☆'.repeat(3 - level)}</span>
-          {t(`level_${level}` as I18nKey)}
-        </h2>
-        <Nav goBack={goBack} busy={busy} />
-      </form>
-    )
-  }
-
-  const c = challenges[index]
-  return (
-    <div>
-      <h2>{t('s4_title')}</h2>
-      <div className="challenge-dots" aria-label={t('s4_progress', { n: index + 1, total: challenges.length })}>
-        {challenges.map((_, i) => (
-          <span key={i} className={i < index ? 'done' : i === index ? 'now' : ''} />
-        ))}
-      </div>
-      <div className="challenge" key={index}>
-        <p className="challenge-q">{t(c.prompt as I18nKey)}</p>
-        {c.visual && (
-          <p className="challenge-visual" dir="ltr">
-            {c.visual}
-          </p>
-        )}
-        <div className="challenge-options">
-          {c.options.map((o) => (
-            <button
-              type="button"
-              key={o}
-              className={`bubble-btn number${feedback?.choice === o ? (feedback.ok ? ' right' : ' wrong') : ''}${feedback && !feedback.ok && o === c.answer ? ' reveal' : ''}`}
-              onClick={(e) => answer(o, e.currentTarget)}
-              disabled={!!feedback}
-            >
-              {o}
-            </button>
-          ))}
-        </div>
-        <p className="challenge-feedback" aria-live="polite">
-          {feedback ? (feedback.ok ? `✨ ${t('s4_great')}` : `💪 ${t('s4_try')}`) : ' '}
-        </p>
-      </div>
-      {goBack && (
-        <div className="step-nav">
-          <button type="button" className="btn ghost" onClick={goBack}>
-            ⬅ {t('back')}
-          </button>
-          <span />
-        </div>
-      )}
-    </div>
-  )
-}
-
 function StepLanguage({ busy, save, goBack }: StepProps) {
   const { t, setLang } = useI18n()
-  const { session, updateProfile } = useSession()
-  const track = useTrack()
-  const navigate = useNavigate()
+  const { session, update, updateProfile } = useSession()
 
   const choose = (language: Lang) =>
     save(async () => {
       await api.updateChild(session.childId!, { language })
       updateProfile({ language })
-      setLang(language)
-      track('onboarding_completed', 7, { language })
-      setTimeout(() => navigate(`/play/${session.childId}`), 700) // let the confetti fly first
+      setLang(language) // the mini-challenges and the guide now speak this language
+      update({ step: 7 })
     })
 
   return (
@@ -708,6 +610,167 @@ function StepLanguage({ busy, save, goBack }: StepProps) {
           <span />
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * Onboarding-only mini-assessment: one visual puzzle per skill, with one retry.
+ * It builds the Learning Profile; it is never a game and never a score.
+ */
+function StepChallenges({ busy, save, goBack, setMood }: StepProps) {
+  const { t, lang } = useI18n()
+  const { session, update, updateProfile } = useSession()
+  const challenges = CHALLENGES[(session.profile.age_band ?? '6-8') as AgeBand]
+  const [index, setIndex] = useState(0)
+  const [tries, setTries] = useState(0)
+  const [skills, setSkills] = useState<Record<string, 'strong' | 'medium' | 'practice'>>({})
+  const [feedback, setFeedback] = useState<{ choice: string; ok: boolean } | null>(null)
+  const [wrongTried, setWrongTried] = useState<string[]>([])
+  const done = index >= challenges.length
+  const c = challenges[Math.min(index, challenges.length - 1)]
+
+  useEffect(() => {
+    if (!done) speak(t(c.prompt as I18nKey), lang)
+  }, [index]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const finishItem = (value: 'strong' | 'medium' | 'practice') => {
+    setSkills((s) => ({ ...s, [c.skill]: value }))
+    setTimeout(() => {
+      setFeedback(null)
+      setWrongTried([])
+      setTries(0)
+      setMood('happy')
+      setIndex((i) => i + 1)
+    }, 1200)
+  }
+
+  const answer = (choice: string, el: HTMLElement) => {
+    if (feedback?.ok) return
+    const attempt = tries + 1
+    setTries(attempt)
+    const ok = choice === c.answer
+    setFeedback({ choice, ok })
+    if (ok) {
+      sfx.yay()
+      confettiFrom(el)
+      setMood('wow')
+      finishItem(skillFromTries(attempt))
+    } else if (attempt < 2) {
+      sfx.oops()
+      setMood('think')
+      setWrongTried((w) => [...w, choice]) // one more try, gently
+    } else {
+      sfx.boing()
+      setMood('happy')
+      finishItem(skillFromTries(null))
+    }
+  }
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    const level = levelFromSkills(skills)
+    save(async () => {
+      await api.updateChild(session.childId!, { level, learning_profile: { skills } })
+      updateProfile({ level, skills })
+      update({ step: 8 })
+    })
+  }
+
+  if (done) {
+    return (
+      <form onSubmit={submit} className="level-reveal">
+        <div className="confetti" aria-hidden="true">🎉</div>
+        <h2>{t('s4_great')}</h2>
+        <p className="skill-row" dir="ltr">
+          {challenges.map((ch) => (
+            <span key={ch.skill} className={`skill-dot ${skills[ch.skill] ?? ''}`}>{SKILL_EMOJI[ch.skill]}</span>
+          ))}
+        </p>
+        <Nav goBack={goBack} busy={busy} />
+      </form>
+    )
+  }
+
+  const retry = feedback && !feedback.ok && tries < 2
+  return (
+    <div>
+      <h2>{t('s4_title')}</h2>
+      <div className="challenge-dots" aria-label={t('s4_progress', { n: index + 1, total: challenges.length })}>
+        {challenges.map((_, i) => (
+          <span key={i} className={i < index ? 'done' : i === index ? 'now' : ''} />
+        ))}
+      </div>
+      <div className="challenge" key={index}>
+        <p className="challenge-q">
+          {t(c.prompt as I18nKey)}
+          <button type="button" className="bubble-speak inline" onClick={() => speak(t(c.prompt as I18nKey), lang)} aria-label="Read aloud">
+            🔊
+          </button>
+        </p>
+        {c.visual && (
+          <p className="challenge-visual" dir="ltr">
+            {c.visual}
+          </p>
+        )}
+        <div className="challenge-options">
+          {c.options.map((o) => (
+            <button
+              type="button"
+              key={o}
+              className={`bubble-btn number${feedback?.choice === o ? (feedback.ok ? ' right' : ' wrong') : ''}${feedback && !feedback.ok && tries >= 2 && o === c.answer ? ' reveal' : ''}`}
+              onClick={(e) => answer(o, e.currentTarget)}
+              disabled={!!feedback?.ok || wrongTried.includes(o) || tries >= 2}
+            >
+              {o}
+            </button>
+          ))}
+        </div>
+        <p className="challenge-feedback" aria-live="polite">
+          {feedback ? (feedback.ok ? `✨ ${t('s4_great')}` : retry ? `💪 ${t('s4_retry')}` : `💪 ${t('s4_try')}`) : ' '}
+        </p>
+      </div>
+      {goBack && (
+        <div className="step-nav">
+          <button type="button" className="btn ghost" onClick={goBack}>
+            ⬅ {t('back')}
+          </button>
+          <span />
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Step 8: the personalised Learning Profile, then the adventure begins. */
+function StepProfile() {
+  const { t, lang } = useI18n()
+  const { session } = useSession()
+  const track = useTrack()
+  const navigate = useNavigate()
+  const p = session.profile
+
+  const start = () => {
+    sfx.yay()
+    confetti()
+    track('onboarding_completed', 8, { language: lang })
+    setTimeout(() => navigate(`/play/${session.childId}`), 700) // let the confetti fly first
+  }
+
+  return (
+    <div className="profile-step">
+      <h2>🌟 {t('pr_title')}</h2>
+      <div className="profile-hero">
+        <span className="profile-buddy">{avatarEmoji(p.avatar_key)}</span>
+        <strong>{p.name}</strong>
+      </div>
+      <LearningProfileCard level={p.level ?? 1} learningStyle={p.learning_style ?? 'watch'} language={p.language ?? lang} skills={p.skills ?? {}} />
+      <div className="step-nav">
+        <span />
+        <button className="btn primary big ready-bounce" onClick={start}>
+          🚀 {t('pr_start')}
+        </button>
+      </div>
     </div>
   )
 }

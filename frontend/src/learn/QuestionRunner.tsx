@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, type AnswerResult, type Question } from '../api'
 import { confettiFrom, sfx } from '../fun'
+import { useGuide } from '../guide/GuideContext'
 import { useLearn } from './LearnContext'
 
 /**
@@ -31,6 +32,11 @@ export function QuestionRunner({
   const correct = useRef(0)
   const q: Question | undefined = questions[index]
   const settled = !!result && (result.correct || !allowRetry || !!result.correct_answer)
+  const guide = useGuide() // observes only; the server still decides what is correct
+
+  useEffect(() => {
+    guide.setQuestion(q?.id)
+  }, [q?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Let the assistant know which question is on screen (it gives hints, not answers).
   useEffect(() => {
@@ -61,6 +67,7 @@ export function QuestionRunner({
     setBusy(true)
     try {
       const res = await api.answer(childId, q.id, choice)
+      guide.report({ type: res.correct ? 'success' : 'mistake' })
       if (res.correct) {
         if (!res.award) sfx.yay() // with points, <Celebrate> plays it
 

@@ -14,6 +14,7 @@ export interface Profile {
   learning_style?: 'watch' | 'listen' | 'do'
   rug_style?: string
   home_region?: string | null
+  skills?: Record<string, string>
 }
 
 export interface Session {

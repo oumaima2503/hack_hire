@@ -58,7 +58,7 @@ export default function LearnLayout() {
     { to: 'studio', icon: t.icons.studio, label: 'Create My Rug' },
     { to: 'rewards', icon: t.icons.rewards, label: 'Rewards' },
     { to: 'progress', icon: t.icons.progress, label: 'Progress' },
-    { to: 'assistant', icon: t.icons.assistant, label: `Ask ${t.guide.name}` },
+    { to: 'assistant', icon: '🧶', label: 'Ask MyRugy' },
   ]
 
   return (
@@ -104,7 +104,8 @@ export default function LearnLayout() {
           <Outlet />
         </main>
 
-        {!loc.pathname.endsWith('/assistant') && <ChatWidget />}
+        {/* Inside a game the MyRugy Guide is already at the edge of the screen. */}
+        {!loc.pathname.endsWith('/assistant') && !focus.gameKey && <ChatWidget />}
         <Celebrate award={award} theme={t} onDone={() => setAward(null)} />
         {gate && <GrownUpGate onClose={() => setGate(false)} onPass={() => navigate('/parent')} />}
       </div>
