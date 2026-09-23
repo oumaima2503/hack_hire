@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { api } from '../api'
+import { avatarEmoji } from '../content'
+import { AvatarGuide3D } from '../components/AvatarGuide3D'
 import { speak, useLearn } from './LearnContext'
 
 interface Msg {
@@ -10,7 +12,10 @@ interface Msg {
 /** The AI learning assistant. Talks to our backend only (/api/chat); Gemini is called server-side. */
 export function ChatWidget({ inline = false }: { inline?: boolean }) {
   const { childId, exp, focus } = useLearn()
-  const guide = { name: 'MyRugy', emoji: '🧶' } // the MyRugy Guide, whatever the world
+  const guide = {
+    name: exp.theme?.guide?.name ?? 'MyRugy',
+    emoji: avatarEmoji(exp.child?.avatar_key) || exp.theme?.guide?.emoji || '🧶',
+  }
   const [open, setOpen] = useState(inline)
   const [messages, setMessages] = useState<Msg[]>([])
   const [text, setText] = useState('')
@@ -38,6 +43,7 @@ export function ChatWidget({ inline = false }: { inline?: boolean }) {
     try {
       const res = await api.chat({ childId, message: m, ...focus })
       setMessages((xs) => [...xs, { role: 'assistant', content: res.reply }])
+      speak(res.reply, lang)
       if (res.source === 'offline') setNote(`${guide.name} is in offline mode: simple answers only.`)
     } catch (e) {
       setMessages((xs) => [...xs, { role: 'assistant', content: e instanceof Error ? e.message : 'Oops, try again!' }])
@@ -57,10 +63,13 @@ export function ChatWidget({ inline = false }: { inline?: boolean }) {
 
   if (!open) {
     return (
-      <button className="chat-fab" onClick={() => setOpen(true)} aria-label={`Ask ${guide.name}`}>
-        <span className="chat-fab-emoji">{guide.emoji}</span>
-        <span className="chat-fab-label">Ask {guide.name}</span>
-      </button>
+      <AvatarGuide3D
+        avatarEmoji={guide.emoji}
+        guideName={guide.name}
+        hintBadge={focus.questionId ? 'Need a hint? 🤔' : null}
+        isSpeaking={busy}
+        onClick={() => setOpen(true)}
+      />
     )
   }
 

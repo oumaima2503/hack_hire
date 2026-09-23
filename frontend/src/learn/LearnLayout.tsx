@@ -9,6 +9,8 @@ import { LearnContext, type ChatFocus } from './LearnContext'
 import { ThemeBackdrop } from './ThemeBackdrop'
 import { ThemeScene } from './ThemeScene'
 
+import { AppWalkthrough } from '../guide/AppWalkthrough'
+
 /** The child's personalised world: every colour, icon, word and particle comes from /experience. */
 export default function LearnLayout() {
   const { childId = '' } = useParams()
@@ -19,12 +21,25 @@ export default function LearnLayout() {
   const [award, setAward] = useState<Award | null>(null)
   const [focus, setFocus] = useState<ChatFocus>({})
   const [gate, setGate] = useState(false)
+  const [showWalkthrough, setShowWalkthrough] = useState(false)
 
   const refresh = useCallback(() => {
-    api.experience(childId).then(setExp, (e) => {
-      if (e instanceof ApiError && e.status === 404) navigate('/parent', { replace: true })
-      else setError(e.message)
-    })
+    api.experience(childId).then(
+      (data) => {
+        setExp(data)
+        try {
+          if (!localStorage.getItem(`myrugy_walkthrough_${childId}`)) {
+            setShowWalkthrough(true)
+          }
+        } catch {
+          // ignore
+        }
+      },
+      (e) => {
+        if (e instanceof ApiError && e.status === 404) navigate('/parent', { replace: true })
+        else setError(e.message)
+      },
+    )
   }, [childId, navigate])
 
   useEffect(refresh, [refresh])
@@ -84,6 +99,9 @@ export default function LearnLayout() {
               🏆 {t.vocab.level} {p.xp_level}
             </span>
             {p.streak_days > 1 && <span className="stat-pill">🔥 {p.streak_days}</span>}
+            <button className="stat-pill grownups" onClick={() => setShowWalkthrough(true)} title="Watch App Walkthrough">
+              ❓ Tour
+            </button>
             <SoundToggle className="stat-pill" />
             <button className="stat-pill grownups" onClick={() => setGate(true)}>
               👨‍👩‍👧 Grown-ups
@@ -108,6 +126,17 @@ export default function LearnLayout() {
         {!loc.pathname.endsWith('/assistant') && !focus.gameKey && <ChatWidget />}
         <Celebrate award={award} theme={t} onDone={() => setAward(null)} />
         {gate && <GrownUpGate onClose={() => setGate(false)} onPass={() => navigate('/parent')} />}
+        <AppWalkthrough
+          childId={childId}
+          childName={exp.child.name}
+          avatarEmoji={avatarEmoji(exp.child.avatar_key)}
+          themeName={t.name}
+          guideName={t.guide.name}
+          guideEmoji={t.guide.emoji}
+          lang={exp.guide?.language}
+          isOpen={showWalkthrough}
+          onClose={() => setShowWalkthrough(false)}
+        />
       </div>
     </LearnContext.Provider>
   )

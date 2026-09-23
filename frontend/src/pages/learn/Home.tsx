@@ -1,11 +1,12 @@
-import { useEffect, useState, type MouseEvent } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, type GameSummary, type LessonSummary } from '../../api'
-import { RUG_JOKES, confettiFrom, sfx, speak } from '../../fun'
 import { avatarEmoji } from '../../content'
 import { useLearn } from '../../learn/LearnContext'
 import { RegionMap } from '../../learn/RegionMap'
 import { Journey } from './Journey'
+
+import { TalkingAvatar } from '../../components/TalkingAvatar'
 
 export default function Home() {
   const { childId, exp } = useLearn()
@@ -16,9 +17,6 @@ export default function Home() {
   const next = exp.next_lesson
   const levelPct = Math.round(((p.points_per_level - p.points_to_next) / p.points_per_level) * 100)
 
-  const [joke, setJoke] = useState<string | null>(null)
-  const [pokes, setPokes] = useState(0)
-
   useEffect(() => {
     api.lessons(childId).then(setLessons, () => setLessons([]))
     api.games(childId).then(setGames, () => setGames([]))
@@ -26,33 +24,22 @@ export default function Home() {
 
   const greeting = `I’m ${t.guide.name}. ${next ? `Today let’s explore “${next.title}” together!` : 'You finished every lesson. Time to create rugs!'}`
 
-  // Tap the guide for a (very) silly rug joke.
-  const poke = (e: MouseEvent<HTMLButtonElement>) => {
-    const j = RUG_JOKES[pokes % RUG_JOKES.length]
-    setPokes((n) => n + 1)
-    setJoke(j)
-    sfx.boing()
-    confettiFrom(e.currentTarget, [t.guide.emoji, '😂', t.vocab.point_emoji])
-    speak(j, 'en')
-  }
-
   return (
     <div className="learn-page">
-      <section className="hero-card">
-        <button className="guide-big" key={pokes} onClick={poke} aria-label={`Tap ${t.guide.name} for a joke`}>
-          {t.guide.emoji}
-          <span className="tap-me">Tap me!</span>
-        </button>
-        <div>
+      <section className="hero-card glass-panel">
+        <TalkingAvatar
+          say={greeting}
+          lang={exp.guide?.language ?? 'en'}
+          avatarEmoji={avatarEmoji(exp.child.avatar_key) || t.guide.emoji}
+          guideName={t.guide.name}
+          size={90}
+          mood="happy"
+          layout="row"
+        />
+        <div style={{ display: 'grid', gap: '10px' }}>
           <h1>
             {t.vocab.cheer}, {exp.child.name}!
           </h1>
-          <p className="bubble-line">
-            {joke ?? greeting}
-            <button className="bubble-speak" onClick={() => speak(joke ?? greeting, 'en')} aria-label="Read aloud">
-              🔊
-            </button>
-          </p>
           {next ? (
             <Link to={`learn/${next.key}`} className="btn primary big">
               🎬 {next.status === 'started' ? 'Continue' : 'Watch & play'}: {next.title}

@@ -19,5 +19,9 @@
     "@vitejs/plugin-react": "^4.3.1",
     "typescript": "^5.5.4",
     "vite": "^5.4.3"
+  },
+  "optionalDependencies": {
+    "@esbuild/win32-x64": "^0.28.2",
+    "@rollup/rollup-win32-x64-msvc": "^4.63.4"
   }
 }

@@ -3,11 +3,13 @@ import { Link, useParams } from 'react-router-dom'
 import { api, type GameSummary, type Lesson as LessonT, type LessonSummary, type Question } from '../../api'
 import { confetti, sfx } from '../../fun'
 import { GamePlayer } from '../../games/GamePlayer'
-import { speak, stopSpeaking, useLearn } from '../../learn/LearnContext'
+import { stopSpeaking, useLearn } from '../../learn/LearnContext'
 import { QuestionRunner } from '../../learn/QuestionRunner'
 import { RegionStops } from '../../learn/RegionMap'
 import { Storyboard } from '../../learn/Storyboard'
 import { TapCards } from '../../learn/TapCards'
+import { TalkingAvatar } from '../../components/TalkingAvatar'
+import { avatarEmoji } from '../../content'
 
 type Step = 'watch' | 'practice' | 'discover' | 'quiz' | 'done'
 const STEP_INFO: Record<Step, { icon: string; label: string }> = {
@@ -189,12 +191,18 @@ export default function Lesson() {
           <RegionStops regions={lesson.regions} lang={lang} />
           {(lesson.learning_style === 'do' ? ['cards', 'explain'] : ['explain', 'cards']).map((part) =>
             part === 'explain' ? (
-              <section className="card" key="explain">
+              <section className="card glass-panel" key="explain">
                 <div className="card-head">
                   <h2>📖 Let’s learn more</h2>
-                  <button className={`btn ${lesson.learning_style === 'listen' ? 'primary' : 'ghost'} small`} onClick={() => speak([...lesson.explain, lesson.analogy].join(' '), lang)}>
-                    🔊 Read to me
-                  </button>
+                  <TalkingAvatar
+                    say={[...lesson.explain, lesson.analogy].filter(Boolean).join(' ')}
+                    lang={lang}
+                    avatarEmoji={avatarEmoji(exp.child.avatar_key) || exp.theme.guide.emoji}
+                    guideName={exp.theme.guide.name}
+                    size={56}
+                    autoPlay={lesson.learning_style === 'listen'}
+                    layout="compact"
+                  />
                 </div>
                 <ul className={`explain level-${lesson.reading_level}`}>
                   {lesson.explain.map((s) => (
