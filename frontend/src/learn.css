@@ -934,4 +934,154 @@ button.stamp-card:hover { transform: scale(1.04) rotate(0deg); }
   overflow: hidden;
   animation: pop 0.35s ease-out;
 }
-
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Kids UI polish: see-through rounded panels, clean spacing, one system.
+   Main panels = frosted glass (blur). Items inside = lighter glass, no blur
+   (blurring dozens of elements over the animated world was slow on tablets).
+   ═══════════════════════════════════════════════════════════════════════ */
+.learn {
+  --r-xl: 28px;
+  --r-lg: 22px;
+  --r-md: 18px;
+  --r-sm: 14px;
+  --glass: color-mix(in srgb, var(--t-surface) 56%, transparent);
+  --glass-soft: color-mix(in srgb, var(--t-surface) 42%, transparent);
+  --glass-line: color-mix(in srgb, #ffffff 55%, transparent);
+  --glass-line-soft: color-mix(in srgb, #ffffff 32%, transparent);
+  --glass-shadow: 0 14px 34px -14px rgba(0, 0, 0, 0.5);
+}
+.learn-page { gap: 20px; max-width: 1040px; }
+
+/* ── Main panels: frosted, rounded, padded ── */
+.learn .card,
+.learn .hero-card,
+.learn .lesson-head,
+.learn .flow-steps,
+.learn .modal,
+.learn .chat-inline {
+  background: var(--glass) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(140%);
+  border: 1.5px solid var(--glass-line);
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--r-xl);
+}
+.learn .card { display: block; color: var(--t-text); padding: clamp(16px, 2.6vw, 26px); text-decoration: none; }
+.learn .card > h2 { font-size: clamp(20px, 2.4vw, 24px); margin: 0 0 14px; display: flex; align-items: center; gap: 8px; }
+.learn .card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.learn .card-head h2 { margin: 0; }
+.learn .flow-steps { border-radius: 999px; }
+
+/* ── Items inside panels: light glass, no blur ── */
+.learn .tile,
+.learn .game-card,
+.learn .result-card,
+.learn .qrunner {
+  background: var(--glass-soft) !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border: 1.5px solid var(--glass-line-soft);
+  box-shadow: 0 8px 20px -12px rgba(0, 0, 0, 0.45);
+  border-radius: var(--r-lg);
+}
+.learn .journey-step > a,
+.learn .journey-step > div,
+.learn .progress-list li,
+.learn .unlock-track li,
+.learn .achievement,
+.learn .profile-tile,
+.learn .explain li,
+.learn .style-theme,
+.learn .region-info,
+.learn .box-items li,
+.learn .stamp-card:not(.visited) {
+  background: var(--glass-soft);
+  border: 1.5px solid var(--glass-line-soft);
+  border-radius: var(--r-md);
+  box-shadow: none;
+}
+.learn .explain li { border-left: 6px solid var(--t-primary); }
+.learn .analogy, .learn .bubble-line, .learn .region-fact { border-radius: var(--r-md); }
+
+/* state tints on top of the glass */
+.learn .journey-step.open > a { background: color-mix(in srgb, var(--t-primary) 18%, var(--glass-soft)); border-color: var(--t-primary); }
+.learn .journey-step.done > a { background: color-mix(in srgb, #3fa45a 22%, var(--glass-soft)); border-color: color-mix(in srgb, #3fa45a 60%, transparent); }
+.learn .journey-step.locked > div { opacity: 0.6; }
+.learn .progress-list li.completed { background: color-mix(in srgb, #3fa45a 20%, var(--glass-soft)); }
+.learn .unlock-track li.unlocked { background: color-mix(in srgb, var(--t-secondary) 30%, var(--glass-soft)); border-color: color-mix(in srgb, var(--t-secondary) 70%, transparent); }
+.learn .unlock-track li.locked { opacity: 0.7; }
+.learn .achievement { opacity: 0.65; }
+.learn .achievement.earned { opacity: 1; background: color-mix(in srgb, var(--t-secondary) 32%, var(--glass-soft)); border-color: color-mix(in srgb, var(--t-secondary) 70%, transparent); }
+.learn .skill-group { border-radius: var(--r-md); border: 1.5px solid var(--glass-line-soft); }
+.learn .skill-group.good { background: color-mix(in srgb, #3fa45a 20%, var(--glass-soft)); }
+.learn .skill-group.practise { background: color-mix(in srgb, #f3b04a 24%, var(--glass-soft)); }
+.learn .skill-chip { background: color-mix(in srgb, #ffffff 80%, transparent); }
+
+/* ── Home ── */
+.learn .hero-card { padding: clamp(18px, 3vw, 28px); gap: clamp(14px, 3vw, 28px); border-bottom: 5px solid var(--t-primary); }
+.learn .tiles { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; }
+.learn .tile { padding: 16px 12px; gap: 4px; min-height: 118px; align-content: center; transition: transform 0.15s; }
+.learn .tile:hover { transform: translateY(-3px); }
+.learn .tile strong { font-size: clamp(20px, 2.4vw, 26px); }
+.learn .box-card { display: flex; align-items: center; gap: 16px; }
+.learn .box-card:hover { transform: translateY(-2px); }
+.learn .journey { gap: 12px; }
+.learn .journey-step > a, .learn .journey-step > div { padding: 14px 18px; }
+.learn .journey-node { background: color-mix(in srgb, #ffffff 80%, transparent); }
+
+/* ── Map ── */
+.learn .region-map {
+  display: grid;
+  gap: 14px 22px;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  grid-template-areas: 'head head' 'meter meter' 'canvas info' 'legend info';
+  grid-template-rows: auto auto auto 1fr; /* legend sits right under the map */
+  align-items: start;
+}
+.learn .region-map-head { grid-area: head; }
+.learn .region-map > .meter { grid-area: meter; height: 10px; }
+.learn .region-map-canvas {
+  grid-area: canvas;
+  max-width: none;
+  margin: 0;
+  border-radius: var(--r-lg);
+  border: 2px solid var(--glass-line);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25), 0 10px 24px -14px rgba(0, 0, 0, 0.5);
+}
+.learn .region-legend { grid-area: legend; justify-content: flex-start; gap: 6px; }
+.learn .region-legend > span { background: var(--glass-soft); border: 1px solid var(--glass-line-soft); border-radius: 999px; padding: 4px 10px; }
+.learn .region-map > .region-info { grid-area: info; }
+.learn .region-info { padding: 16px; gap: 12px; }
+.learn .region-info-body { grid-template-columns: minmax(0, 1fr); }
+.learn .region-map > .region-info .region-preview { justify-self: center; }
+.learn .region-map-head strong { font-size: clamp(20px, 2.4vw, 24px); }
+.learn .region-count { box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.4); }
+
+/* ── Progress & Rewards ── */
+.learn .progress-list { gap: 8px; }
+.learn .progress-list li { padding: 10px 14px; }
+.learn .passport { gap: 12px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+.learn .stamp-card { border-radius: var(--r-md); padding: 14px 10px; }
+.learn .unlock-track { gap: 10px; }
+.learn .unlock-track li { padding: 12px 16px; }
+.learn .achievements { gap: 12px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.learn .achievement { padding: 14px 10px; }
+.learn .meter { background: color-mix(in srgb, #ffffff 35%, transparent); }
+.learn .world-switch .chip-btn { background: var(--glass-soft); border-color: var(--glass-line-soft); color: var(--t-text); }
+.learn .world-switch .chip-btn.on { background: color-mix(in srgb, var(--t-primary) 22%, var(--glass-soft)); border-color: var(--t-primary); }
+.learn .profile-tiles { gap: 12px; }
+
+/* Onboarding (kids too): same rounded see-through feel, text stays readable */
+.stage:not(.has-world) { background: color-mix(in srgb, var(--cream) 90%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.stage, .explorer-card { border-radius: 28px; }
+
+@media (max-width: 900px) {
+  .learn .region-map { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'head' 'meter' 'canvas' 'legend' 'info'; }
+}
+@media (max-width: 640px) {
+  .learn { --r-xl: 22px; --r-lg: 18px; --r-md: 14px; }
+  .learn .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .learn .tile { min-height: 100px; }
+  .learn .card { padding: 14px; }
+}
