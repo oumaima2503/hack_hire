@@ -15,7 +15,6 @@ import ParentTest from './pages/ParentTest'
 import Result from './pages/Result'
 import Assistant from './pages/learn/Assistant'
 import GamePage from './pages/learn/GamePage'
-import Games from './pages/learn/Games'
 import Home from './pages/learn/Home'
 import JourneyPage from './pages/learn/Journey'
 import Lesson from './pages/learn/Lesson'
@@ -59,7 +58,7 @@ createRoot(document.getElementById('root')!).render(
                 <Route index element={<Home />} />
                 <Route path="learn" element={<JourneyPage />} />
                 <Route path="learn/:key" element={<Lesson />} />
-                <Route path="games" element={<Games />} />
+                <Route path="games" element={<Navigate to="../learn" replace />} />
                 <Route path="games/:key" element={<GamePage />} />
                 <Route path="studio" element={<Studio />} />
                 <Route path="rewards" element={<Rewards />} />

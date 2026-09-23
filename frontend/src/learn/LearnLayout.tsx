@@ -54,8 +54,7 @@ export default function LearnLayout() {
   const p = exp.progress
   const nav = [
     { to: '', end: true, icon: t.icons.home, label: 'Home' },
-    { to: 'learn', icon: t.icons.learn, label: 'Learn' },
-    { to: 'games', icon: t.icons.games, label: 'Games' },
+    { to: 'learn', icon: t.icons.learn, label: 'Learn & Play' },
     { to: 'studio', icon: t.icons.studio, label: 'Create My Rug' },
     { to: 'rewards', icon: t.icons.rewards, label: 'Rewards' },
     { to: 'progress', icon: t.icons.progress, label: 'Progress' },

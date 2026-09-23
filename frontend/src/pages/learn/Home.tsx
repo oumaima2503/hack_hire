@@ -1,6 +1,6 @@
 import { useEffect, useState, type MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { api, type LessonSummary } from '../../api'
+import { api, type GameSummary, type LessonSummary } from '../../api'
 import { RUG_JOKES, confettiFrom, sfx, speak } from '../../fun'
 import { avatarEmoji } from '../../content'
 import { useLearn } from '../../learn/LearnContext'
@@ -10,6 +10,7 @@ import { Journey } from './Journey'
 export default function Home() {
   const { childId, exp } = useLearn()
   const [lessons, setLessons] = useState<LessonSummary[]>([])
+  const [games, setGames] = useState<GameSummary[]>([])
   const t = exp.theme
   const p = exp.progress
   const next = exp.next_lesson
@@ -20,6 +21,7 @@ export default function Home() {
 
   useEffect(() => {
     api.lessons(childId).then(setLessons, () => setLessons([]))
+    api.games(childId).then(setGames, () => setGames([]))
   }, [childId, p.total_points])
 
   const greeting = `I’m ${t.guide.name}. ${next ? `Today let’s explore “${next.title}” together!` : 'You finished every lesson. Time to create rugs!'}`
@@ -53,7 +55,7 @@ export default function Home() {
           </p>
           {next ? (
             <Link to={`learn/${next.key}`} className="btn primary big">
-              {next.emoji} {next.status === 'started' ? 'Continue' : 'Start'}: {next.title}
+              🎬 {next.status === 'started' ? 'Continue' : 'Watch & play'}: {next.title}
             </Link>
           ) : (
             <Link to="studio" className="btn primary big">
@@ -100,7 +102,7 @@ export default function Home() {
         <h2>
           {t.icons.learn} Your rug-making journey
         </h2>
-        <Journey lessons={lessons} />
+        <Journey lessons={lessons} games={games} />
       </section>
 
       <Link to={`/adventure?child=${childId}`} className="card box-card">
