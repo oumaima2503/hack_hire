@@ -435,6 +435,10 @@ export const api = {
     gameKey?: string
     questionId?: string
     gameState?: { mistakes: number; hints: number; note?: string }
+    /** Where the child is in the app (context for the answer). */
+    page?: string
+    /** The answer will be spoken aloud by the companion. */
+    voice?: boolean
   }) =>
     call<ChatReply>('POST', '/chat', b),
   chatHistory: (childId: string, lessonId?: string) =>

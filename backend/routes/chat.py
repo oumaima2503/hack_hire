@@ -20,7 +20,9 @@ def chat():
     d = json_body()
     return jsonify(chat_service.reply(g.child, d.get("message"), lesson_key=_key(d.get("lessonId")),
                                       game_key=_key(d.get("gameKey")), question_id=_key(d.get("questionId")),
-                                      game_state=d.get("gameState")))
+                                      game_state=d.get("gameState"),
+                                      page=d.get("page") if d.get("page") in chat_service.PAGES else None,
+                                      voice=d.get("voice") is True))
 
 
 @bp.get("/history")

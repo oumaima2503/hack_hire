@@ -1,21 +1,21 @@
 import { useCallback, useEffect, useState, type CSSProperties, type FormEvent } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate, useParams } from 'react-router-dom'
 import { api, ApiError, type Award, type Experience } from '../api'
 import { SoundToggle } from '../components/SoundToggle'
 import { avatarEmoji } from '../content'
 import { Celebrate } from './Celebrate'
-import { ChatWidget } from './ChatWidget'
 import { LearnContext, type ChatFocus } from './LearnContext'
 import { ThemeBackdrop } from './ThemeBackdrop'
 import { ThemeScene } from './ThemeScene'
 
 import { AppWalkthrough } from '../guide/AppWalkthrough'
+import { CompanionProvider, useCompanion } from '../companion/Companion'
+import { companionText, pickLine } from '../companion/companionText'
 
 /** The child's personalised world: every colour, icon, word and particle comes from /experience. */
 export default function LearnLayout() {
   const { childId = '' } = useParams()
   const navigate = useNavigate()
-  const loc = useLocation()
   const [exp, setExp] = useState<Experience | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [award, setAward] = useState<Award | null>(null)
@@ -73,11 +73,12 @@ export default function LearnLayout() {
     { to: 'studio', icon: t.icons.studio, label: 'Create My Rug' },
     { to: 'rewards', icon: t.icons.rewards, label: 'Rewards' },
     { to: 'progress', icon: t.icons.progress, label: 'Progress' },
-    { to: 'assistant', icon: '🧶', label: 'Ask MyRugy' },
+    { to: 'assistant', icon: avatarEmoji(exp.child.avatar_key), label: `Talk to ${t.guide.name}` },
   ]
 
   return (
     <LearnContext.Provider value={{ childId, exp, refresh, celebrate, focus, setFocus }}>
+      <CompanionProvider>
       <div className={`learn theme-${t.key}`} style={style} dir="ltr" lang="en">
         <ThemeBackdrop theme={t} />
         <ThemeScene theme={t.key} />
@@ -122,8 +123,7 @@ export default function LearnLayout() {
           <Outlet />
         </main>
 
-        {/* Inside a game the MyRugy Guide is already at the edge of the screen. */}
-        {!loc.pathname.endsWith('/assistant') && !focus.gameKey && <ChatWidget />}
+        <CompanionCheer award={award} lang={exp.child.language} />
         <Celebrate award={award} theme={t} onDone={() => setAward(null)} />
         {gate && <GrownUpGate onClose={() => setGate(false)} onPass={() => navigate('/parent')} />}
         <AppWalkthrough
@@ -138,8 +138,20 @@ export default function LearnLayout() {
           onClose={() => setShowWalkthrough(false)}
         />
       </div>
+      </CompanionProvider>
     </LearnContext.Provider>
   )
+}
+
+/** The companion jumps for joy whenever the child earns points or unlocks something. */
+function CompanionCheer({ award, lang }: { award: Award | null; lang: Experience['child']['language'] }) {
+  const companion = useCompanion()
+  useEffect(() => {
+    if (!award) return
+    companion.act('celebrating', 3200)
+    if (award.new_rewards.length || award.new_achievements.length) companion.say(pickLine(companionText(lang).cheer), { state: 'celebrating' })
+  }, [award]) // eslint-disable-line react-hooks/exhaustive-deps
+  return null
 }
 
 /** A playful "ask a grown-up" check before leaving child mode (not a security boundary). */

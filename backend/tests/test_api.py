@@ -326,6 +326,26 @@ def test_chat_prompt_is_personalised_private_and_rate_limited(app, monkeypatch):
     assert 429 in codes
 
 
+def test_companion_voice_chat_uses_animal_page_and_spoken_style(app, monkeypatch):
+    c = register(app)
+    cid = make_child(c, age=5)  # avatar: dino
+    captured = {}
+
+    def fake_generate(system_prompt, history, message):
+        captured.update(system=system_prompt)
+        return "Wool comes from sheep!"
+
+    monkeypatch.setattr(config, "GEMINI_API_KEY", "test-key-not-real")
+    monkeypatch.setattr(gemini_client, "generate", fake_generate)
+    r = c.post("/api/chat", {"childId": cid, "message": "where does wool come from", "page": "rewards", "voice": True})
+    assert r.status_code == 200
+    assert "little dinosaur companion" in captured["system"] and "rewards" in captured["system"]
+    assert "spoken aloud" in captured["system"] and "aged 5" in captured["system"]
+    # unknown pages are ignored, text chat keeps the written style
+    c.post("/api/chat", {"childId": cid, "message": "hi", "page": "<script>"})
+    assert "<script>" not in captured["system"] and "spoken aloud" not in captured["system"]
+
+
 # ───────── Funnel still works ─────────
 
 def test_funnel_flow_still_works(app):
@@ -460,4 +480,4 @@ def test_onboarding_profile_step_and_chat_game_state(app):
     assert c.post("/api/events", {"session_id": "s", "event_name": "step_viewed", "step": 8}).status_code == 201
     r = c.post("/api/chat", {"childId": cid, "message": "help", "gameKey": "order_steps",
                              "gameState": {"mistakes": 3, "hints": "x", "note": "<b>stuck</b>"}})
-    assert r.status_code == 200 and r.json["guide"]["name"] == "MyRugy"
+    assert r.status_code == 200 and r.json["guide"]["name"] == c.get(f"/api/children/{cid}/experience").json["theme"]["guide"]["name"]

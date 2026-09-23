@@ -6,6 +6,8 @@ declare const process: { env: Record<string, string | undefined> }
 
 export default defineConfig({
   plugins: [react()],
+  // three.js (the 3D companion) ships as its own long-cached chunk.
+  build: { rollupOptions: { output: { manualChunks: { three: ['three'] } } }, chunkSizeWarningLimit: 700 },
   server: {
     port: 5173,
     // Same-origin proxy: the httpOnly session cookie and /api live on one origin.

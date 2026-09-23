@@ -84,8 +84,16 @@ export function confettiFrom(el: Element | null | undefined, emojis?: string[]) 
 
 const VOICES: Record<string, string> = { en: 'en-GB', fr: 'fr-FR', ar: 'ar-SA' }
 
+export interface SpeechEvents {
+  onStart?: () => void
+  onWord?: () => void
+  onEnd?: () => void
+}
+// Keep a reference to the live utterance: some browsers drop events of garbage-collected ones.
+let liveUtterance: SpeechSynthesisUtterance | null = null
+
 /** Read text aloud with the browser's speech engine (no network, no keys). */
-export function speak(text: string, lang = 'en') {
+export function speak(text: string, lang = 'en', events?: SpeechEvents) {
   if (!soundOn()) return false
   try {
     if (!('speechSynthesis' in window)) return false
@@ -94,6 +102,15 @@ export function speak(text: string, lang = 'en') {
     u.lang = VOICES[lang] ?? 'en-GB'
     u.rate = 0.92
     u.pitch = 1.15
+    if (events) {
+      u.onstart = () => events.onStart?.()
+      u.onboundary = () => events.onWord?.()
+      u.onend = u.onerror = () => {
+        if (liveUtterance === u) liveUtterance = null
+        events.onEnd?.()
+      }
+    }
+    liveUtterance = u
     window.speechSynthesis.speak(u)
     return true
   } catch {

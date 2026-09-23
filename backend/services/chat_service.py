@@ -14,6 +14,15 @@ from validators import clean_text, redact_personal_info, require
 
 LANG_NAMES = {"en": "English", "fr": "French", "ar": "Arabic"}
 HISTORY_TURNS = 8
+# The companion is the child's onboarding animal, drawn as a full-body 3D character.
+ANIMALS = {"fox": "fox", "camel": "camel", "owl": "owl", "turtle": "turtle", "lion": "lion", "monkey": "monkey",
+           "dino": "little dinosaur", "dolphin": "dolphin", "cat": "cat", "unicorn": "unicorn"}
+PAGES = {
+    "home": "the home screen (their map and journey overview)", "learn": "the Learn & Play journey map",
+    "lesson": "a lesson (video, practice, discover, quiz)", "game": "a practice game", "studio": "the rug design studio",
+    "rewards": "their rewards and unlocked treasures", "progress": "their progress page and Morocco passport",
+    "journey": "the journey map", "assistant": "the talking corner",
+}
 SESSION_TTL = timedelta(hours=6)
 
 
@@ -24,7 +33,7 @@ def _game_state(value):
     return {"mistakes": num("mistakes"), "hints": num("hints"), "note": clean_text(value.get("note"), 160)}
 
 
-def _context(child, lesson_key=None, game_key=None, question_id=None, game_state=None):
+def _context(child, lesson_key=None, game_key=None, question_id=None, game_state=None, page=None, voice=False):
     repo = get_repo()
     theme = ls.theme_for(child)
     overview = ls.lessons_overview(child)
@@ -52,6 +61,8 @@ def _context(child, lesson_key=None, game_key=None, question_id=None, game_state
         "regions_visited": [r["name"] for r in trip["route"] if r["status"] == "visited"],
         "skills": ((child.get("learning_profile") or {}).get("skills") or {}),
         "game_state": _game_state(game_state),
+        "animal": ANIMALS.get(child.get("avatar_key") or "", "fox"),
+        "page": PAGES.get(page), "voice": bool(voice),
     }
 
 
@@ -59,9 +70,10 @@ def build_system_prompt(ctx):
     t, v = ctx["theme"], ctx["theme"]["vocab"]
     max_sentences = 2 if ctx["age_band"] == "3-5" else 4 if ctx["age_band"] == "6-8" else 5
     lines = [
-        "You are MyRugy, the friendly guide of MyRugy Kids (a little woven rug with a smiling face), an app that "
+        f"You are {t['guide']['name']}, the child's friendly {ctx['animal']} companion in MyRugy Kids, an app that "
         "teaches children how traditional Moroccan rugs are made (materials, tools, design, weaving, finishing, symbols). "
-        f"The child is currently exploring the {t['name']} world with {t['guide']['name']} {t['guide']['emoji']}.",
+        f"You travel with the child through the {t['name']} world and across Morocco. Speak as a warm, playful "
+        f"{ctx['animal']} friend (you may mention being a {ctx['animal']} now and then), never as a robot or a chatbot.",
         "You are a companion and tutor INSIDE the existing games: you explain, demonstrate with words, give hints, "
         "answer questions and encourage. You never play for the child, never decide if an answer is right, never "
         "change the game or its rules, never promise rewards, and never choose which game to play.",
@@ -80,6 +92,12 @@ def build_system_prompt(ctx):
         "tell them to talk to a grown-up they trust.",
         "- Be encouraging. Praise effort. Explain mistakes kindly. End with a small question or a next step when useful.",
         "- Plain text only, no markdown. Emojis are fine (at most 2).",
+        *([
+            "- VOICE: your answer is spoken aloud by your animated character. Use short, easy-to-say sentences, "
+            "no emojis, no lists, no symbols or abbreviations. Sound natural, like talking to a friend.",
+            "- The child's words come from speech recognition and may be misheard: guess the most likely meaning "
+            "about rugs; if it really makes no sense, kindly ask them to say it again.",
+        ] if ctx["voice"] else []),
         "- Adapt: after one mistake say it is almost there; after repeated mistakes make it simpler (focus on one "
         "small part); after success, celebrate what they noticed. Never make the child feel bad.",
     ]
@@ -96,6 +114,8 @@ def build_system_prompt(ctx):
             f"Interests: {', '.join(ctx['interests']) or 'unknown'}",
             f"Points: {ctx['points']} {v['points']} (level {ctx['xp_level']})",
             f"Lessons completed: {', '.join(ctx['completed']) or 'none yet'}"]
+    if ctx["page"]:
+        info.append(f"The child is on {ctx['page']}.")
     if ctx["lesson"]:
         info.append(f"Current lesson: {ctx['lesson']['title']}: {ctx['lesson']['summary']}")
     if ctx["game"]:
@@ -153,7 +173,7 @@ def _session(child, lesson_key):
     return repo.insert("mk_chat_sessions", {"child_id": child["id"], "lesson_key": lesson_key})
 
 
-def reply(child, message, lesson_key=None, game_key=None, question_id=None, game_state=None):
+def reply(child, message, lesson_key=None, game_key=None, question_id=None, game_state=None, page=None, voice=False):
     repo = get_repo()
     message = clean_text(message, 500)
     require(message, "Type a question first")
@@ -161,7 +181,7 @@ def reply(child, message, lesson_key=None, game_key=None, question_id=None, game
         ls.lesson_by_key(lesson_key)  # 404 on unknown keys
     if game_key is not None:
         game_by_key(game_key)
-    ctx = _context(child, lesson_key, game_key, question_id, game_state)
+    ctx = _context(child, lesson_key, game_key, question_id, game_state, page, voice)
     session = _session(child, lesson_key)
     history = sorted(repo.select("mk_chat_messages", session_id=session["id"]), key=lambda m: m["created_at"])
     history = [{"role": m["role"], "content": m["content"]} for m in history[-HISTORY_TURNS * 2:]]
@@ -178,7 +198,8 @@ def reply(child, message, lesson_key=None, game_key=None, question_id=None, game
 
     repo.insert("mk_chat_messages", {"session_id": session["id"], "child_id": child["id"], "role": "user", "content": safe_message})
     repo.insert("mk_chat_messages", {"session_id": session["id"], "child_id": child["id"], "role": "assistant", "content": answer})
-    return {"reply": answer, "source": source, "guide": {"name": "MyRugy", "emoji": "🧶"}}
+    theme = ctx["theme"]
+    return {"reply": answer, "source": source, "guide": {"name": theme["guide"]["name"], "emoji": theme["guide"]["emoji"]}}
 
 
 def history(child, lesson_key=None):
