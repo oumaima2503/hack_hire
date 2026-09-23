@@ -481,3 +481,51 @@ def test_onboarding_profile_step_and_chat_game_state(app):
     r = c.post("/api/chat", {"childId": cid, "message": "help", "gameKey": "order_steps",
                              "gameState": {"mistakes": 3, "hints": "x", "note": "<b>stuck</b>"}})
     assert r.status_code == 200 and r.json["guide"]["name"] == c.get(f"/api/children/{cid}/experience").json["theme"]["guide"]["name"]
+
+# ───────── Parent mode (password needed for parent-only content) ─────────
+
+def test_child_mode_blocks_parent_content_until_password(app):
+    c = register(app)
+    cid = make_child(c)
+    assert c.get("/api/parents/dashboard").status_code == 200  # just registered: parent mode
+    assert c.post("/api/auth/parent-mode/lock").status_code == 200  # a child's play area opened
+
+    for method, url, body in [
+        ("get", "/api/parents/dashboard", None), ("get", "/api/parents/children", None),
+        ("get", f"/api/parents/children/{cid}", None), ("put", f"/api/parents/children/{cid}", {"name": "Bob"}),
+        ("delete", f"/api/parents/children/{cid}", None), ("post", "/api/parents/children", {"name": "Zed", "avatar_key": "fox"}),
+        ("patch", f"/api/children/{cid}", {"age": 11}),
+    ]:
+        r = getattr(c, method)(url, body) if body is not None else getattr(c, method)(url)
+        assert r.status_code == 403 and r.json["code"] == "parent_locked", (method, url)
+    order = {"child_id": cid, "variant": "personalised", "full_name": "Sara P",
+             "shipping_address": {"line1": "1 rue", "city": "Rabat", "country": "MA"}}
+    assert c.post("/api/orders", order).json.get("code") == "parent_locked"
+
+    # The child can still play, talk to the companion and switch their world.
+    assert c.get(f"/api/children/{cid}/experience").status_code == 200
+    assert c.post("/api/chat", {"childId": cid, "message": "what is a loom"}).status_code == 200
+    assert c.patch(f"/api/children/{cid}", {"selected_theme": "ocean"}).status_code == 200
+    me = c.get("/api/auth/me").json
+    assert me["parent_unlocked"] is False and me["parent"]["email"].startswith("s***@")
+
+    wrong = c.post("/api/auth/parent-mode/unlock", {"password": "guess123"})
+    assert wrong.status_code == 401 and wrong.json["code"] == "wrong_password"
+    assert c.post("/api/auth/parent-mode/unlock", {"password": "weave1234"}).status_code == 200
+    assert c.get("/api/auth/parent-mode").json["unlocked"] is True
+    assert c.get(f"/api/parents/children/{cid}").status_code == 200
+    assert c.get("/api/auth/me").json["parent"]["email"] == "sara.parent@example.com"
+
+
+def test_parent_unlock_is_bound_to_the_session_and_rate_limited(app):
+    a = register(app)
+    b = Client(app)
+    assert b.post("/api/auth/login", {"email": "sara.parent@example.com", "password": "weave1234"}).status_code == 200
+    b.post("/api/auth/parent-mode/lock")
+    stolen = a.c.get_cookie("mr_parent", path="/api")
+    b.c.set_cookie("mr_parent", stolen.value, path="/api")  # unlock from another session is useless
+    assert b.get("/api/parents/dashboard").json["code"] == "parent_locked"
+    codes = [b.post("/api/auth/parent-mode/unlock", {"password": f"nope{i}"}).status_code for i in range(7)]
+    assert 429 in codes
+    a.post("/api/auth/logout")
+    assert a.get("/api/parents/dashboard").status_code == 401

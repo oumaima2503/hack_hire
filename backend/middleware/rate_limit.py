@@ -48,6 +48,10 @@ def rate_limit(*rules):
 by_ip = client_ip
 
 
+def by_parent():
+    return g.parent["id"]
+
+
 def by_child():
     return g.child["id"]
 

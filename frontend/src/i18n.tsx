@@ -189,7 +189,10 @@ const en = {
   p_submit: 'Send my ratings',
   p_start: 'Start',
   p_thanks: 'Thank you! Your ratings help us build better adventures.',
-  p_no_child: 'Finish an onboarding first, or open this page with ?child=<id>.',
+  p_no_child: 'Add a child first: the test shows the adventure proposed for your child.',
+  p_add_child: 'Add a child',
+  p_pick_child: 'Which child is this test for?',
+  p_pick_hint: 'You will see two adventure proposals made for this child and rate each one.',
 }
 
 type Key = keyof typeof en
@@ -382,7 +385,10 @@ const fr: Record<Key, string> = {
   p_submit: 'Envoyer mes notes',
   p_start: 'Commencer',
   p_thanks: 'Merci ! Vos notes nous aident à créer de meilleures aventures.',
-  p_no_child: "Terminez d'abord un parcours, ou ouvrez cette page avec ?child=<id>.",
+  p_no_child: "Ajoutez d'abord un enfant : le test montre l'aventure proposée pour votre enfant.",
+  p_add_child: 'Ajouter un enfant',
+  p_pick_child: 'Pour quel enfant faites-vous ce test ?',
+  p_pick_hint: 'Vous verrez deux propositions d’aventure faites pour cet enfant et vous noterez chacune.',
 }
 
 const ar: Record<Key, string> = {
@@ -573,7 +579,10 @@ const ar: Record<Key, string> = {
   p_submit: 'أرسل تقييماتي',
   p_start: 'ابدأ',
   p_thanks: 'شكراً! تقييماتكم تساعدنا على بناء مغامرات أفضل.',
-  p_no_child: 'أكملوا مسار التسجيل أولاً، أو افتحوا هذه الصفحة مع ?child=<id>.',
+  p_no_child: 'أضيفوا طفلاً أولاً: يعرض الاختبار المغامرة المقترحة لطفلكم.',
+  p_add_child: 'إضافة طفل',
+  p_pick_child: 'لأي طفل تقومون بهذا الاختبار؟',
+  p_pick_hint: 'سترون اقتراحين للمغامرة لهذا الطفل وتقيّمون كل واحد منهما.',
 }
 
 const DICTS: Record<Lang, Record<Key, string>> = { en, fr, ar }

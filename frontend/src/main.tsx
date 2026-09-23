@@ -2,6 +2,7 @@ import { StrictMode, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth'
+import { ParentGate } from './components/ParentGate'
 import { RequireAuth } from './components/RequireAuth'
 import { I18nProvider } from './i18n'
 import LearnLayout from './learn/LearnLayout'
@@ -29,6 +30,12 @@ import './styles.css'
 import './learn.css'
 
 const Private = ({ children }: { children: ReactNode }) => <RequireAuth>{children}</RequireAuth>
+// Parent-only pages: logged in AND parent mode unlocked with the password.
+const ParentOnly = ({ children }: { children: ReactNode }) => (
+  <RequireAuth>
+    <ParentGate>{children}</ParentGate>
+  </RequireAuth>
+)
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -39,19 +46,19 @@ createRoot(document.getElementById('root')!).render(
             <Routes>
               {/* Funnel */}
               <Route path="/" element={<Landing />} />
-              <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/adventure" element={<Private><Result /></Private>} />
-              <Route path="/checkout" element={<Private><Checkout /></Private>} />
-              <Route path="/confirmed" element={<Private><Confirmed /></Private>} />
-              <Route path="/parent-test" element={<Private><ParentTest /></Private>} />
+              <Route path="/onboarding" element={<ParentGate><Onboarding /></ParentGate>} />
+              <Route path="/adventure" element={<ParentOnly><Result /></ParentOnly>} />
+              <Route path="/checkout" element={<ParentOnly><Checkout /></ParentOnly>} />
+              <Route path="/confirmed" element={<ParentOnly><Confirmed /></ParentOnly>} />
+              <Route path="/parent-test" element={<ParentOnly><ParentTest /></ParentOnly>} />
               <Route path="/dashboard" element={<Dashboard />} />
 
               {/* Parent */}
               <Route path="/login" element={<AuthPage mode="login" />} />
               <Route path="/register" element={<AuthPage mode="register" />} />
-              <Route path="/parent" element={<Private><ParentDashboard /></Private>} />
-              <Route path="/parent/children/:childId" element={<Private><ChildDetail /></Private>} />
-              <Route path="/parent/children/:childId/edit" element={<Private><ChildEdit /></Private>} />
+              <Route path="/parent" element={<ParentOnly><ParentDashboard /></ParentOnly>} />
+              <Route path="/parent/children/:childId" element={<ParentOnly><ChildDetail /></ParentOnly>} />
+              <Route path="/parent/children/:childId/edit" element={<ParentOnly><ChildEdit /></ParentOnly>} />
 
               {/* Child learning world */}
               <Route path="/play/:childId" element={<Private><LearnLayout /></Private>}>

@@ -356,10 +356,13 @@ export interface ChatReply {
 // ───────── Transport ─────────
 
 export class ApiError extends Error {
-  constructor(message: string, public status: number) {
+  constructor(message: string, public status: number, public code?: string) {
     super(message)
   }
 }
+
+/** Fired when the API says parent mode is locked (password needed for parent-only content). */
+export const PARENT_LOCKED_EVENT = 'myrugy:parent-locked'
 
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch(`/api${path}`, {
@@ -370,7 +373,10 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
   })
   if (res.status === 204) return undefined as T
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new ApiError(data.error || `Request failed (${res.status})`, res.status)
+  if (!res.ok) {
+    if (data.code === 'parent_locked') window.dispatchEvent(new Event(PARENT_LOCKED_EVENT))
+    throw new ApiError(data.error || `Request failed (${res.status})`, res.status, data.code)
+  }
   return data as T
 }
 
@@ -396,8 +402,12 @@ export const api = {
   register: (b: { name: string; email: string; password: string; consent: boolean }) =>
     call<{ parent: Parent; children: Child[] }>('POST', '/auth/register', b),
   login: (email: string, password: string) => call<{ parent: Parent; children: Child[] }>('POST', '/auth/login', { email, password }),
-  me: () => call<{ parent: Parent; children: Child[] }>('GET', '/auth/me'),
+  me: () => call<{ parent: Parent; children: Child[]; parent_unlocked: boolean }>('GET', '/auth/me'),
   logout: () => call('POST', '/auth/logout'),
+  // parent mode: parent-only content needs the password again
+  parentMode: () => call<{ unlocked: boolean; minutes: number }>('GET', '/auth/parent-mode'),
+  parentUnlock: (password: string) => call<{ unlocked: boolean; minutes: number }>('POST', '/auth/parent-mode/unlock', { password }),
+  parentLock: () => call<{ unlocked: boolean }>('POST', '/auth/parent-mode/lock'),
 
   // parent
   parentDashboard: () => call<{ parent: Parent; children: ChildCard[] }>('GET', '/parents/dashboard'),

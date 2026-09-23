@@ -46,7 +46,8 @@ def create_app(repo=None):
 
     @app.errorhandler(ApiError)
     def api_error(e):
-        return jsonify(error=e.message), e.status
+        body = {"error": e.message, **({"code": e.code} if e.code else {})}
+        return jsonify(body), e.status
 
     @app.errorhandler(HTTPException)
     def http_error(e):

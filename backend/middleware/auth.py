@@ -4,16 +4,20 @@
     @authorize_parent         → role 'parent' + consent on record
     @verify_child_ownership   → g.child, only if child.parent_id == g.parent.id
 
+    @require_parent_unlock    → parent-only content: the password was re-entered recently
+                                (parent mode). Children playing on the same login can't
+                                open it, even by typing URLs or calling the API.
+
 The parent id always comes from the verified token, never from the request body.
 """
 from functools import wraps
 
 import jwt
-from flask import g, request
+from flask import g, make_response, request
 
 import config
 from middleware import get_repo
-from services.auth_service import decode_token
+from services.auth_service import check_parent_unlock, decode_token, issue_parent_unlock
 from validators import ApiError, is_uuid
 
 MUTATING = {"POST", "PUT", "PATCH", "DELETE"}
@@ -103,6 +107,37 @@ def verify_child_ownership(fn):
     return wrapper
 
 
+def parent_unlocked():
+    """True when this login session is in parent mode (password re-entered recently)."""
+    return check_parent_unlock(request.cookies.get(config.PARENT_COOKIE), g.parent["id"], g.claims["jti"])
+
+
+def parent_locked_error():
+    return ApiError("Grown-ups only: please enter your password to continue", 403, code="parent_locked")
+
+
+def set_parent_unlock(res, parent_id, session_jti):
+    res.set_cookie(config.PARENT_COOKIE, issue_parent_unlock(parent_id, session_jti), httponly=True,
+                   secure=config.COOKIE_SECURE, samesite="Strict", path="/api",
+                   max_age=config.PARENT_UNLOCK_MINUTES * 60)
+    return res
+
+
+def clear_parent_unlock(res):
+    res.delete_cookie(config.PARENT_COOKIE, path="/api", samesite="Strict", secure=config.COOKIE_SECURE, httponly=True)
+    return res
+
+
+def require_parent_unlock(fn):
+    """Parent mode guard. Each parent request slides the idle timeout forward."""
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not parent_unlocked():
+            raise parent_locked_error()
+        return set_parent_unlock(make_response(fn(*args, **kwargs)), g.parent["id"], g.claims["jti"])
+    return wrapper
+
+
 def parent_route(fn):
     """authenticate_parent + authorize_parent."""
     return authenticate_parent(authorize_parent(fn))
@@ -111,3 +146,13 @@ def parent_route(fn):
 def child_route(fn):
     """authenticate_parent + authorize_parent + verify_child_ownership."""
     return authenticate_parent(authorize_parent(verify_child_ownership(fn)))
+
+
+def parent_only_route(fn):
+    """parent_route + parent mode (password re-entered)."""
+    return authenticate_parent(authorize_parent(require_parent_unlock(fn)))
+
+
+def parent_child_route(fn):
+    """child_route + parent mode: a parent action on one of their children."""
+    return authenticate_parent(authorize_parent(verify_child_ownership(require_parent_unlock(fn))))

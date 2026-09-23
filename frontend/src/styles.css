@@ -488,3 +488,29 @@ h1, h2, h3 { font-family: var(--head); line-height: 1.1; margin: 0 0 0.4em; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ───────── Parent mode lock ───────── */
+.parent-lock-page { display: grid; justify-items: center; gap: 14px; padding: 24px 0 40px; }
+.parent-lock { width: min(420px, 100%); display: grid; gap: 12px; justify-items: stretch; text-align: center; background: var(--cream, #fff8ef); color: var(--ink, #2a1a10);
+  border-radius: 28px; padding: 28px 26px 22px; box-shadow: var(--shadow, 0 20px 40px rgba(0, 0, 0, .25)); border-top: 6px solid var(--indigo, #3b3f8f); }
+.parent-lock h2 { margin: 0; font-size: 26px; }
+.parent-lock-icon { font-size: 44px; line-height: 1; }
+.parent-lock-text { margin: 0; font-weight: 700; color: var(--ink-soft, #6b5a4a); font-size: 15px; }
+.parent-lock input[type='password'] { font: 800 18px/1.2 inherit; letter-spacing: 2px; text-align: center; padding: 12px 14px; border-radius: 14px; border: 2px solid rgba(0, 0, 0, .15); background: #fff; color: #2a1a10; width: 100%; box-sizing: border-box; }
+.parent-lock input[type='password']:focus { outline: none; border-color: var(--indigo, #3b3f8f); }
+.parent-lock .error { margin: 0; }
+.parent-lock-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.parent-lock-foot { margin: 4px 0 0; font-size: 13px; color: var(--ink-soft, #6b5a4a); font-weight: 700; }
+.parent-lock-kids { font-weight: 800; color: #fff; text-align: center; }
+.parent-lock-kids a { color: inherit; }
+.learn .modal.gate, .modal.gate { padding: 0; background: transparent; box-shadow: none; }
+.learn .modal.gate .parent-lock, .modal.gate .parent-lock { margin: 0 auto; }
+
+/* Parent test: choose the child */
+.pick-child { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 6px; }
+.pick-child-btn { display: grid; justify-items: center; gap: 4px; min-width: 120px; padding: 14px 18px; border-radius: 20px; border: 2px solid var(--sand, #e8dccb);
+  background: var(--white, #fff); color: var(--ink, #2a1a10); font: inherit; cursor: pointer; transition: transform .15s, border-color .15s; }
+.pick-child-btn:hover { transform: translateY(-3px); border-color: var(--terracotta, #d9643a); }
+.pick-child-emoji { font-size: 38px; line-height: 1; }
+.pick-child-btn strong { font-size: 17px; }
+.pick-child-btn small { color: var(--ink-soft, #6b5a4a); font-weight: 700; }

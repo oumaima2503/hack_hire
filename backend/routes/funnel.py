@@ -8,7 +8,7 @@ from flask import Blueprint, g, jsonify, request
 
 from content import BOX_PRICE
 from middleware import get_repo
-from middleware.auth import child_route, optional_parent, parent_route
+from middleware.auth import child_route, optional_parent, parent_child_route, parent_only_route
 from recommend import build_proposal
 from validators import clean_text, is_uuid, json_body, require
 
@@ -79,7 +79,7 @@ def proposal(child_id):
 
 
 @bp.post("/orders")
-@child_route  # child_id in the body must belong to the logged-in parent
+@parent_child_route  # parent mode + child_id in the body must belong to the logged-in parent
 def create_order():
     d = json_body()
     variant = d.get("variant")
@@ -100,7 +100,7 @@ def create_order():
 
 
 @bp.post("/orders/<order_id>/pay")
-@parent_route
+@parent_only_route
 def pay_order(order_id):
     order = get_repo().get("mk_orders", order_id) if is_uuid(order_id) else None
     require(order is not None and order["parent_id"] == g.parent["id"], "Order not found", 404)

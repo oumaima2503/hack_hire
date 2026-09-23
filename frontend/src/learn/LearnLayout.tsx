@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState, type CSSProperties, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type CSSProperties } from 'react'
 import { NavLink, Outlet, useNavigate, useParams } from 'react-router-dom'
 import { api, ApiError, type Award, type Experience } from '../api'
+import { ParentPasswordForm } from '../components/ParentGate'
 import { SoundToggle } from '../components/SoundToggle'
 import { avatarEmoji } from '../content'
 import { Celebrate } from './Celebrate'
@@ -43,6 +44,11 @@ export default function LearnLayout() {
   }, [childId, navigate])
 
   useEffect(refresh, [refresh])
+
+  // Opening a child's play area switches to child mode: parent pages need the password again.
+  useEffect(() => {
+    api.parentLock().catch(() => undefined)
+  }, [])
 
   const celebrate = useCallback(
     (a: Award | null | undefined) => {
@@ -154,32 +160,13 @@ function CompanionCheer({ award, lang }: { award: Award | null; lang: Experience
   return null
 }
 
-/** A playful "ask a grown-up" check before leaving child mode (not a security boundary). */
+/** Leaving child mode needs the parent's password (checked by the API, not in the browser). */
 function GrownUpGate({ onClose, onPass }: { onClose: () => void; onPass: () => void }) {
-  const [[a, b]] = useState(() => [6 + Math.floor(Math.random() * 4), 6 + Math.floor(Math.random() * 4)])
-  const [value, setValue] = useState('')
-  const [wrong, setWrong] = useState(false)
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    if (Number(value) === a * b) onPass()
-    else setWrong(true)
-  }
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Grown-ups only">
-      <form className="modal gate" onSubmit={submit}>
-        <h2>👨‍👩‍👧 Grown-ups only</h2>
-        <p>
-          What is {a} × {b}?
-        </p>
-        <input inputMode="numeric" value={value} onChange={(e) => setValue(e.target.value.replace(/\D/g, ''))} autoFocus aria-label="Answer" />
-        {wrong && <p className="error">Not quite. Ask a grown-up!</p>}
-        <div className="step-nav">
-          <button type="button" className="btn ghost" onClick={onClose}>
-            Back to learning
-          </button>
-          <button className="btn primary">Continue</button>
-        </div>
-      </form>
+      <div className="modal gate">
+        <ParentPasswordForm onUnlocked={onPass} onCancel={onClose} cancelLabel="Back to learning" />
+      </div>
     </div>
   )
 }

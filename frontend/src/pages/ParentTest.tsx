@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { api, type Proposal, type Variant } from '../api'
+import { useAuth } from '../auth'
 import { Layout } from '../components/Layout'
 import { ProposalView } from '../components/ProposalView'
+import { avatarEmoji } from '../content'
 import { useI18n } from '../i18n'
 import { useSession, useTrack } from '../state'
 
@@ -14,8 +16,12 @@ export default function ParentTest() {
   const { t, lang } = useI18n()
   const { session } = useSession()
   const track = useTrack()
-  const [params] = useSearchParams()
-  const childId = params.get('child') || session.childId
+  const { children: kids } = useAuth()
+  const [params, setParams] = useSearchParams()
+  // Only the parent's own children: a stale id in the URL or session falls back to the picker.
+  const own = (id: string | null | undefined) => (id && kids.some((k) => k.id === id) ? id : null)
+  const childId = own(params.get('child')) ?? own(session.childId) ?? (kids.length === 1 ? kids[0].id : null)
+  const pickChild = (id: string) => setParams({ child: id })
   const [order] = useState<Variant[]>(() => (Math.random() < 0.5 ? ['personalised', 'generic'] : ['generic', 'personalised']))
   const [proposals, setProposals] = useState<Partial<Record<Variant, Proposal>>>({})
   const [phase, setPhase] = useState<'intro' | 0 | 1 | 'done'>('intro')
@@ -48,8 +54,32 @@ export default function ParentTest() {
   }
 
   let body
-  if (!childId) {
-    body = <p className="panel">{t('p_no_child')}</p>
+  if (!childId && kids.length === 0) {
+    body = (
+      <div className="panel center-panel">
+        <h1>👨‍👩‍👧 {t('p_title')}</h1>
+        <p className="lead dark">{t('p_no_child')}</p>
+        <Link to="/onboarding" className="btn primary big">
+          ➕ {t('p_add_child')}
+        </Link>
+      </div>
+    )
+  } else if (!childId) {
+    body = (
+      <div className="panel center-panel">
+        <h1>👨‍👩‍👧 {t('p_title')}</h1>
+        <p className="lead dark">{t('p_pick_child')}</p>
+        <p className="hint">{t('p_pick_hint')}</p>
+        <div className="pick-child">
+          {kids.map((k) => (
+            <button key={k.id} className="pick-child-btn" onClick={() => pickChild(k.id)}>
+              <span className="pick-child-emoji">{avatarEmoji(k.avatar_key)}</span>
+              <strong>{k.name}</strong>
+            </button>
+          ))}
+        </div>
+      </div>
+    )
   } else if (phase === 'intro') {
     body = (
       <div className="panel center-panel">

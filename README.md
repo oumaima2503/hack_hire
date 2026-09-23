@@ -61,6 +61,10 @@ Row-level security is on for every table with no policies, so only the backend's
 - **Guards** run in this order on every private route: `authenticate_parent → authorize_parent → verify_child_ownership`. A child that isn't yours returns **404**, and `parentId` is never read from the request.
 - **CSRF**: cookie-authenticated requests that change data must send `X-Requested-With`.
 - **Rate limits** apply to login, register and chat (per IP and per child).
+- **Parent mode (step-up auth)**: parent-only content needs the account password again. This covers the family dashboard, child details and conversations, adding, editing or deleting children, profile changes and orders.
+  - Opening a child's play area locks parent mode, and the "Grown-ups" button asks for the password.
+  - The unlock is a separate httpOnly cookie (`mr_parent`), bound to the login session, with an idle timeout of `PARENT_UNLOCK_MINUTES` (10 by default). It is rate-limited and checked by the API on every parent route, so typing URLs doesn't bypass it.
+  - In child mode, children can still play, talk to their companion and switch their world.
 - **Validation**: every input is validated against a whitelist and sanitised.
 - **Server-side checks**: quiz answers never reach the browser, and game results and points are checked on the server.
 - **Gemini** is called only by the backend. The child's name is never sent, emails and phone numbers are removed, strict safety settings apply, quiz mode gives hints rather than answers, and parents can read every conversation.

@@ -3,11 +3,12 @@ so g.child is always a child of the logged-in parent."""
 from flask import Blueprint, g, jsonify
 
 from middleware import get_repo
-from middleware.auth import child_route
+from middleware.auth import child_route, parent_locked_error, parent_unlocked
 from services import children_service as cs, games_service as games, guide_service as guide, learning_service as ls
 from validators import json_body, require
 
 bp = Blueprint("learning", __name__, url_prefix="/api/children/<child_id>")
+CHILD_EDITABLE = {"selected_theme"}
 
 
 # ── Profile (used by onboarding steps) ──
@@ -20,7 +21,11 @@ def get_child(child_id):
 @bp.patch("")
 @child_route
 def patch_child(child_id):
-    patch = cs.validate_child_fields(json_body(), child_id=g.child["id"])
+    body = json_body()
+    # Children may switch their world themselves; any other profile change is a parent action.
+    if set(body) - CHILD_EDITABLE and not parent_unlocked():
+        raise parent_locked_error()
+    patch = cs.validate_child_fields(body, child_id=g.child["id"])
     require(patch, "Nothing to update")
     return jsonify(cs.child_public(get_repo().update("mk_children", g.child["id"], patch)))
 

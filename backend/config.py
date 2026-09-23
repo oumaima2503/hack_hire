@@ -34,6 +34,11 @@ JWT_ALGORITHM = "HS256"
 JWT_ISSUER = "myrugy-kids"
 JWT_TTL_HOURS = _int("JWT_TTL_HOURS", 12)
 AUTH_COOKIE = "mr_session"
+# Parent mode: parent-only content needs the account password again (step-up auth).
+# The unlock lives in its own httpOnly cookie, is bound to the login session and
+# expires after this many minutes without parent activity.
+PARENT_COOKIE = "mr_parent"
+PARENT_UNLOCK_MINUTES = _int("PARENT_UNLOCK_MINUTES", 10)
 COOKIE_SECURE = _bool("COOKIE_SECURE", PRODUCTION)
 
 # ── Points (configurable: POINTS_CONFIG='{"lesson_completed": 15}') ──
@@ -61,6 +66,7 @@ GEMINI_TIMEOUT = _int("GEMINI_TIMEOUT", 20)
 # ── Rate limits: (requests, window seconds) ──
 LIMITS = {
     "login": (10, 15 * 60),
+    "unlock": (5, 15 * 60),
     "register": (5, 60 * 60),
     "chat_minute": (8, 60),
     "chat_day": (80, 24 * 60 * 60),
