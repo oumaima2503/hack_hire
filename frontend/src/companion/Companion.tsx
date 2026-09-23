@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation } from 'react-router-dom'
 import { api } from '../api'
@@ -20,6 +20,8 @@ export interface SayOptions {
   tone?: 'hint' | 'cheer'
   /** What the child said (shown above the answer). */
   heard?: string
+  /** Keep the "write to me" box open under the bubble. */
+  keepTyping?: boolean
 }
 /** Extra context a game can give the companion (read-only: it never changes the game). */
 export interface ChatContext {
@@ -79,11 +81,15 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   bubbleRef.current = bubble
   const [heard, setHeard] = useState('')
   const [typing, setTyping] = useState(false)
+  const [writing, setWriting] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const recCancelled = useRef(false)
   const [text, setText] = useState('')
   const [exchanges, setExchanges] = useState(0)
   const [fallback, setFallback] = useState(false)
   const [size, setSize] = useState(190)
   const [side, setSide] = useState<'left' | 'right'>('left')
+  const [dragging, setDragging] = useState(false)
 
   const engine = useRef<Companion3D | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -101,6 +107,12 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   focusRef.current = focus
   const pageRef = useRef(page)
   pageRef.current = page
+  // Where the child just put the companion (viewport ratios). It stays there for a while,
+  // then goes back to exploring on its own.
+  const PLACED_FOR = 40000
+  const placed = useRef<{ rx: number; ry: number; until: number } | null>(null)
+  const isPlaced = () => !!placed.current && Date.now() < placed.current.until
+  const drag = useRef<{ sx: number; sy: number; ox: number; oy: number; lastX: number; moved: boolean } | null>(null)
 
   const setMode = useCallback((s: CompanionState) => {
     stateRef.current = s
@@ -114,10 +126,19 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   }
 
   // ───────────── where the companion can stand (feet position, viewport px) ─────────────
+  const clampSpot = useCallback((x: number, y: number) => {
+    const S = sizeRef.current
+    return {
+      x: Math.min(window.innerWidth - S * 0.3, Math.max(S * 0.3, x)),
+      y: Math.min(window.innerHeight + S * 0.05, Math.max(S * 0.75, y)),
+    }
+  }, [])
+
   const perches = useCallback(() => {
     const w = window.innerWidth
     const h = window.innerHeight
     const S = sizeRef.current
+    if (placed.current && isPlaced()) return [clampSpot(placed.current.rx * w, placed.current.ry * h)]
     const nav = document.querySelector('.learn-nav')?.getBoundingClientRect()
     const head = document.querySelector('.learn-top')?.getBoundingClientRect()
     const sideNav = nav && nav.height > nav.width
@@ -137,7 +158,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       { x: (minX + maxX) / 2 + 80, y: floor },
       { x: maxX - 30, y: top },
     ].filter((p) => p.x >= minX - 1)
-  }, [])
+  }, [clampSpot])
 
   const place = useCallback(() => {
     const el = boxRef.current
@@ -224,7 +245,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       clear('bubble')
       clear('speech')
       const st = o.state ?? 'talking'
-      setTyping(false)
+      setTyping(!!o.keepTyping)
       setBubble({ kind: 'say', text: message, tone: o.tone, sticky: o.sticky, heard: o.heard })
       setMode(st)
       const done = () => {
@@ -232,7 +253,13 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         engine.current?.setSpeaking(false)
         if (stateRef.current === st) setMode('idle')
         clear('bubble')
-        timers.current.bubble = window.setTimeout(() => setBubble(null), o.sticky ? 25000 : 3500)
+        // Never close the bubble while the child is writing in it.
+        const close = () => {
+          if (inputRef.current && (inputRef.current.value || document.activeElement === inputRef.current)) {
+            timers.current.bubble = window.setTimeout(close, 5000)
+          } else setBubble(null)
+        }
+        timers.current.bubble = window.setTimeout(close, o.sticky ? 25000 : 3500)
       }
       const words = message.split(/\s+/).length
       const voiced = o.voice ?? exp.guide.auto_speak
@@ -293,10 +320,10 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
           voice: true,
         })
         setExchanges((n) => n + 1)
-        say(res.reply, { state: res.reply.length > 140 ? 'explaining' : 'talking', voice: true, sticky: true, heard: m })
+        say(res.reply, { state: res.reply.length > 140 ? 'explaining' : 'talking', voice: true, sticky: true, heard: m, keepTyping: true })
         return res.reply
       } catch (e) {
-        say(e instanceof Error && e.message ? e.message : tx.error, { state: 'explaining', voice: false })
+        say(e instanceof Error && e.message ? e.message : tx.error, { state: 'explaining', voice: false, sticky: true, keepTyping: true })
         return null
       }
     },
@@ -314,10 +341,12 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     clear('speech')
     clear('bubble')
     walk.current = null
+    setTyping(true) // the child can always write instead of talking
+    setWriting(false)
     if (!SpeechRecognitionCtor) {
       setMode('listening')
-      setBubble({ kind: 'say', text: tx.no_voice, sticky: true })
-      setTyping(true)
+      setBubble({ kind: 'listen' })
+      setWriting(true)
       return
     }
     const r = new SpeechRecognitionCtor()
@@ -328,6 +357,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     let finalText = ''
     let partial = ''
     let failed = ''
+    recCancelled.current = false
     r.onresult = (e) => {
       let interim = ''
       for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -342,13 +372,14 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       failed = e.error
     }
     r.onend = () => {
-      recRef.current = null
+      if (recRef.current === r) recRef.current = null
+      if (recCancelled.current) return // the child chose to write instead
       const said = (finalText || partial).trim()
       if (said) ask(said)
       else if (['not-allowed', 'service-not-allowed', 'audio-capture'].includes(failed)) {
-        say(tx.mic_blocked, { state: 'explaining', voice: false, sticky: true })
-        setTyping(true)
-      } else if (failed !== 'aborted') say(tx.heard_nothing, { state: 'talking', voice: false })
+        say(tx.mic_blocked, { state: 'explaining', voice: false, sticky: true, keepTyping: true })
+        setWriting(true)
+      } else if (failed !== 'aborted') say(tx.heard_nothing, { state: 'talking', voice: false, sticky: true, keepTyping: true })
     }
     recRef.current = r
     setHeard('')
@@ -359,10 +390,21 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       r.start()
     } catch {
       recRef.current = null
-      setTyping(true)
-      setBubble({ kind: 'say', text: tx.no_voice, sticky: true })
+      setWriting(true)
     }
   }, [ask, lang, say, setMode, tx])
+
+  /** The child started writing: stop the microphone (without sending what it heard). */
+  const startWriting = () => {
+    if (recRef.current) {
+      recCancelled.current = true
+      recRef.current.abort()
+      recRef.current = null
+      setHeard('')
+    }
+    if (!writing) setWriting(true)
+    clear('bubble')
+  }
 
   const setChatContext = useCallback((fn: (() => ChatContext) | null) => {
     chatCtx.current = fn
@@ -395,8 +437,8 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       }, 400)
       return () => window.clearTimeout(id)
     }
-    // A new page: walk there with the child (unless busy talking or listening).
-    if (['listening', 'thinking', 'talking', 'explaining'].includes(stateRef.current)) return
+    // A new page: walk there with the child (unless busy, or the child placed it somewhere).
+    if (isPlaced() || ['listening', 'thinking', 'talking', 'explaining'].includes(stateRef.current)) return
     const id = window.setTimeout(() => {
       const list = perches()
       let i = Math.floor(Math.random() * list.length)
@@ -419,7 +461,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (inGame || reducedMotion()) return
     const id = window.setInterval(() => {
-      if (document.hidden || stateRef.current !== 'idle' || walk.current || recRef.current || bubbleRef.current) return
+      if (document.hidden || isPlaced() || drag.current || stateRef.current !== 'idle' || walk.current || recRef.current || bubbleRef.current) return
       const list = perches()
       if (list.length < 2) return
       let i = Math.floor(Math.random() * list.length)
@@ -461,10 +503,63 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     ask(text)
   }
 
+  // ───────────── the child can pick the companion up and move it ─────────────
+  const pin = () => {
+    placed.current = { rx: pos.current.x / window.innerWidth, ry: pos.current.y / window.innerHeight, until: Date.now() + PLACED_FOR }
+  }
+  const onPointerDown = (e: PointerEvent<HTMLButtonElement>) => {
+    if (e.button !== 0) return
+    e.currentTarget.setPointerCapture(e.pointerId)
+    drag.current = { sx: e.clientX, sy: e.clientY, ox: pos.current.x, oy: pos.current.y, lastX: e.clientX, moved: false }
+  }
+  const onPointerMove = (e: PointerEvent<HTMLButtonElement>) => {
+    const d = drag.current
+    if (!d) return
+    const dx = e.clientX - d.sx
+    const dy = e.clientY - d.sy
+    if (!d.moved) {
+      if (Math.hypot(dx, dy) < 8) return
+      d.moved = true
+      walk.current = null
+      setDragging(true)
+      setMode('walking') // little legs paddling while being carried
+    }
+    pos.current = clampSpot(d.ox + dx, d.oy + dy)
+    if (Math.abs(e.clientX - d.lastX) > 1) engine.current?.setFacing(e.clientX - d.lastX)
+    d.lastX = e.clientX
+    place()
+  }
+  const onPointerUp = (e: PointerEvent<HTMLButtonElement>) => {
+    const d = drag.current
+    drag.current = null
+    if (!d) return
+    if (e.type === 'pointercancel') {
+      if (d.moved) pin()
+    } else if (!d.moved) {
+      listen() // a simple tap = talk
+      return
+    } else pin()
+    setDragging(false)
+    sfx.pop()
+    act('celebrating', 700) // a happy hop on landing
+  }
+  const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
+    const step = e.shiftKey ? 60 : 24
+    const moves: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }
+    const m = moves[e.key]
+    if (!m) return
+    e.preventDefault()
+    walk.current = null
+    pos.current = clampSpot(pos.current.x + m[0], pos.current.y + m[1])
+    if (m[0]) engine.current?.setFacing(m[0])
+    place()
+    pin()
+  }
+
   const overlay = (
     <div
       ref={boxRef}
-      className={`companion companion-${state} bubble-${side}${inGame ? ' in-game' : ''}`}
+      className={`companion companion-${state} bubble-${side}${inGame ? ' in-game' : ''}${dragging ? ' dragging' : ''}`}
       style={{ width: size, height: size, ['--c-accent' as string]: exp.theme.colors.primary }}
       data-testid="companion"
     >
@@ -476,22 +571,34 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       <button
         type="button"
         className="companion-hit"
-        onClick={listen}
-        aria-label={state === 'listening' ? `${name} is listening. Tap when you are done.` : `Talk to ${name}`}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        onClick={(e) => e.detail === 0 && listen() /* keyboard Enter/Space */}
+        onKeyDown={onKeyDown}
+        aria-label={state === 'listening' ? `${name} is listening. Tap when you are done.` : `Talk to ${name}. Drag or use the arrow keys to move ${name}.`}
         title={tx.tap_me}
       />
       {state === 'listening' && <span className="companion-ring" aria-hidden="true" />}
       {state === 'thinking' && <span className="companion-dots" aria-hidden="true">•••</span>}
-      {!bubble && !inGame && state !== 'walking' && <span className="companion-tag">🎤 {tx.tap_me}</span>}
+      {!bubble && !inGame && state !== 'walking' && !dragging && <span className="companion-tag">🎤 {tx.tap_me}</span>}
 
       {bubble && (
         <div className={`companion-bubble${bubble.kind === 'say' && bubble.tone ? ` tone-${bubble.tone}` : ''}`} role="status" aria-live="polite" dir="auto" lang={lang}>
           {bubble.kind === 'listen' && (
             <>
-              <p className="cb-listen">
-                <span className="cb-mic">🎤</span> {tx.listening}
-              </p>
-              {heard && <p className="cb-heard">“{heard}”</p>}
+              {writing ? (
+                <p className="cb-listen writing">
+                  <span className="cb-mic">✍️</span> {tx.write_to_me}
+                </p>
+              ) : (
+                <p className="cb-listen">
+                  <span className="cb-mic">🎤</span> {tx.listening}
+                </p>
+              )}
+              {heard && !writing && <p className="cb-heard">“{heard}”</p>}
+              {!writing && <p className="cb-or">{tx.or_write}</p>}
             </>
           )}
           {bubble.kind === 'thinking' && (
@@ -514,7 +621,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
                 <button type="button" onClick={() => say(bubble.text, { state: 'talking', voice: true, sticky: true })} aria-label="Read aloud">
                   🔊
                 </button>
-                {bubble.sticky && (
+                {bubble.sticky && !typing && (
                   <button type="button" onClick={listen}>
                     🎤 {tx.ask_again}
                   </button>
@@ -527,7 +634,31 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
           )}
           {typing && (
             <form className="cb-form" onSubmit={submit}>
-              <input value={text} onChange={(e) => setText(e.target.value)} placeholder={tx.type_here} maxLength={300} dir="auto" aria-label={tx.type_here} autoFocus />
+              {SpeechRecognitionCtor && (
+                <button
+                  type="button"
+                  className={`cb-mic-btn${state === 'listening' && !writing ? ' live' : ''}`}
+                  onClick={listen}
+                  aria-label={tx.talk_instead}
+                  title={tx.talk_instead}
+                >
+                  🎤
+                </button>
+              )}
+              <input
+                ref={inputRef}
+                value={text}
+                onChange={(e) => {
+                  startWriting()
+                  setText(e.target.value)
+                }}
+                onFocus={startWriting}
+                placeholder={tx.type_here}
+                maxLength={300}
+                dir="auto"
+                aria-label={tx.type_here}
+                autoFocus={writing}
+              />
               <button className="btn primary small" disabled={!text.trim()}>
                 {tx.send}
               </button>

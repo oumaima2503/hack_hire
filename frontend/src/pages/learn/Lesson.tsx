@@ -5,6 +5,7 @@ import { confetti, sfx } from '../../fun'
 import { GamePlayer } from '../../games/GamePlayer'
 import { stopSpeaking, useLearn } from '../../learn/LearnContext'
 import { QuestionRunner } from '../../learn/QuestionRunner'
+import { LessonRoad } from '../../learn/LessonRoad'
 import { RegionStops } from '../../learn/RegionMap'
 import { Storyboard } from '../../learn/Storyboard'
 import { TapCards } from '../../learn/TapCards'
@@ -141,16 +142,13 @@ export default function Lesson() {
         {lesson.status === 'completed' && <span className="badge-done">✓ Done</span>}
       </header>
 
-      <ol className="flow-steps" aria-label="Lesson steps">
-        {steps.map((s, i) => (
-          <li key={s} className={i < at ? 'done' : i === at ? 'now' : ''}>
-            <button onClick={() => reached(s) && go(s)} disabled={!reached(s)} aria-current={i === at ? 'step' : undefined}>
-              <span className="flow-icon">{i < at ? '✓' : STEP_INFO[s].icon}</span>
-              <span className="flow-label">{s === 'practice' && !hasGame ? 'Practice quiz' : STEP_INFO[s].label}</span>
-            </button>
-          </li>
-        ))}
-      </ol>
+      <LessonRoad
+        stops={steps.map((s) => ({ key: s, icon: STEP_INFO[s].icon, label: s === 'practice' && !hasGame ? 'Practice quiz' : STEP_INFO[s].label }))}
+        at={at}
+        reached={(s) => reached(s as Step)}
+        onGo={(s) => go(s as Step)}
+        avatar={avatarEmoji(exp.child.avatar_key) || exp.theme.guide.emoji}
+      />
 
       {step === 'watch' && (
         <section className="card flow-card">

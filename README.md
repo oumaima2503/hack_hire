@@ -95,6 +95,25 @@ The six games (Choose Materials, Match Tools, Build Pattern, Order Steps, Rug St
 - **Boundaries:** the Guide never decides correctness, gives rewards or changes game state. The existing engine stays the authority.
 - **Languages:** the Guide's texts are in EN/FR/AR. Lesson and game content is still English.
 
+## 3D companion (replaces the chatbot)
+
+The buddy chosen during onboarding (fox, camel, owl, turtle, lion, monkey, dino, dolphin, cat, unicorn) becomes a full-body 3D companion (`frontend/src/companion/`, three.js, toon-shaded). Each animal is built from primitives, so there are no model files to download.
+
+- **States:** idle, walking, talking, listening, thinking, explaining, celebrating and waving. They blend smoothly, the character blinks, and the mouth moves with the voice (speech word events).
+- **Travels with the child:**
+  - It floats above everything (it is attached to `<body>`, top z-index).
+  - It walks to a new spot when the page changes and wanders now and then.
+  - It jumps for joy when the child earns points.
+- **The child can move it:** drag it anywhere, or focus it and use the arrow keys. It stays there for about 40 seconds, then goes back to exploring.
+- **Talk:**
+  1. Tap it and the browser's speech recognition listens. Tap again when done.
+  2. The text goes to `/api/chat` with the page, lesson, game and question.
+  3. The answer is adapted to the child's age, level, learning profile and context, in "spoken" style.
+  4. It is read aloud while the character animates.
+  - Typing is the fallback when the microphone is unavailable. Only text reaches the server, never audio.
+- **Games are unchanged:** the in-game Guide uses the companion as its body and voice. Hints, reactions and the game engine are untouched.
+- **Lessons:** the Watch → Practice → Discover → Quiz → Done steps are shown as a road map, with the child's avatar on the current stop.
+
 ## Regional journey across Morocco
 
 The 8-stage course is also a trip through all **12 regions of Morocco** (`backend/services/regions_service.py`).

@@ -5,6 +5,9 @@ export type Page = 'home' | 'learn' | 'lesson' | 'game' | 'studio' | 'rewards' |
 interface Texts {
   hello: (name: string, buddy: string) => string
   tap_me: string
+  or_write: string
+  write_to_me: string
+  talk_instead: string
   listening: string
   heard_nothing: string
   mic_blocked: string
@@ -21,7 +24,10 @@ interface Texts {
 
 const EN: Texts = {
   hello: (name, buddy) => `Hi ${name}! I'm ${buddy}, your travel buddy. Tap me whenever you want to talk!`,
-  tap_me: 'Tap to talk',
+  tap_me: 'Tap to talk or write',
+  or_write: '…or write to me below ✍️',
+  write_to_me: 'Write to me!',
+  talk_instead: 'Talk instead',
   listening: "I'm listening…",
   heard_nothing: "I didn't hear anything. Tap me and try again!",
   mic_blocked: 'I can’t hear you. Ask a grown-up to allow the microphone, or type here!',
@@ -45,7 +51,10 @@ const EN: Texts = {
 
 const FR: Texts = {
   hello: (name, buddy) => `Salut ${name} ! Je suis ${buddy}, ton compagnon de voyage. Touche-moi quand tu veux parler !`,
-  tap_me: 'Touche pour parler',
+  tap_me: 'Touche pour parler ou écrire',
+  or_write: '…ou écris-moi en dessous ✍️',
+  write_to_me: 'Écris-moi !',
+  talk_instead: 'Parler plutôt',
   listening: "Je t'écoute…",
   heard_nothing: "Je n'ai rien entendu. Touche-moi et réessaie !",
   mic_blocked: "Je ne t'entends pas. Demande à un adulte d'autoriser le micro, ou écris ici !",
@@ -69,7 +78,10 @@ const FR: Texts = {
 
 const AR: Texts = {
   hello: (name, buddy) => `مرحباً ${name}! أنا ${buddy}، رفيقك في الرحلة. المسني متى أردت التحدث!`,
-  tap_me: 'المس للتحدث',
+  tap_me: 'المس للتحدث أو الكتابة',
+  or_write: '…أو اكتب لي في الأسفل ✍️',
+  write_to_me: 'اكتب لي!',
+  talk_instead: 'تحدث بدلاً من ذلك',
   listening: 'أنا أستمع…',
   heard_nothing: 'لم أسمع شيئاً. المسني وحاول مرة أخرى!',
   mic_blocked: 'لا أستطيع سماعك. اطلب من شخص بالغ السماح بالميكروفون، أو اكتب هنا!',
