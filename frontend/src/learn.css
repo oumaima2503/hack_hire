@@ -1085,3 +1085,141 @@ button.stamp-card:hover { transform: scale(1.04) rotate(0deg); }
   .learn .tile { min-height: 100px; }
   .learn .card { padding: 14px; }
 }
+/* ═══════════════════════════════════════════════════════════════════════
+   Extra-transparent panels, matching the sidebar: light white glass + white
+   text. Solid "paper" elements (bubbles, answer buttons, game pieces, map
+   labels) keep their own dark text for readability.
+   ═══════════════════════════════════════════════════════════════════════ */
+.learn {
+  --glass: rgba(255, 255, 255, 0.10);
+  --glass-soft: rgba(255, 255, 255, 0.08);
+  --glass-line: rgba(255, 255, 255, 0.22);
+  --glass-line-soft: rgba(255, 255, 255, 0.16);
+}
+.learn .card,
+.learn .hero-card,
+.learn .lesson-head,
+.learn .flow-steps,
+.learn .modal,
+.learn .chat-inline {
+  /* a whisper of shade under the white so text stays readable on bright worlds */
+  background: linear-gradient(rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.10)), rgba(10, 12, 30, 0.12) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(130%);
+  backdrop-filter: blur(10px) saturate(130%);
+  border: 1.5px solid var(--glass-line);
+  box-shadow: 0 12px 30px -16px rgba(0, 0, 0, 0.55);
+}
+/* white text inside the see-through panels (like the sidebar) */
+.learn .card,
+.learn .hero-card,
+.learn .lesson-head,
+.learn .flow-steps,
+.learn .modal,
+.learn .tile,
+.learn .game-card,
+.learn .result-card,
+.learn .qrunner {
+  --t-text: #ffffff;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+}
+.learn .tile, .learn .game-card, .learn .result-card, .learn .qrunner { background: var(--glass-soft) !important; border-color: var(--glass-line-soft); }
+
+/* secondary text on glass */
+.learn .card .hint, .learn .card .muted, .learn .hero-card .hint, .learn .lead-dark, .learn .modal .hint { color: rgba(255, 255, 255, 0.78); }
+.learn .card .good, .learn .result-card .good, .learn .qrunner .good { color: #9af0ad; }
+.learn .card .soft, .learn .result-card .soft, .learn .qrunner .soft { color: #ffd59a; }
+.learn .linklike { color: #ffe0a3; }
+.learn .btn.ghost { background: rgba(255, 255, 255, 0.12); color: #ffffff; border-color: rgba(255, 255, 255, 0.35); }
+.learn .btn.ghost:hover { background: rgba(255, 255, 255, 0.2); }
+.learn .flow-steps li.done button { color: #9af0ad; }
+.learn .region-legend .lg.visited { color: #9af0ad; }
+.learn .region-legend .lg.locked { color: rgba(255, 255, 255, 0.7); }
+.learn .step-chip { background: rgba(255, 255, 255, 0.14); }
+.learn .step-chip.ok { background: rgba(63, 164, 90, 0.4); color: #ffffff; }
+.learn .region-chip { background: rgba(255, 255, 255, 0.12); }
+.learn .skill-title { color: #ffffff; }
+.learn .journey-step.open > a { background: color-mix(in srgb, var(--t-primary) 22%, transparent); }
+.learn .journey-step.done > a { background: rgba(63, 164, 90, 0.22); }
+.learn .progress-list li.completed { background: rgba(63, 164, 90, 0.22); }
+.learn .unlock-track li.unlocked, .learn .achievement.earned { background: color-mix(in srgb, var(--t-secondary) 26%, transparent); }
+.learn .skill-group.good { background: rgba(63, 164, 90, 0.22); }
+.learn .skill-group.practise { background: rgba(243, 176, 74, 0.22); }
+.learn .world-switch .chip-btn { color: #ffffff; }
+
+/* "paper" elements keep dark, readable text (no white shadow) */
+.learn .bubble,
+.learn .bubble-line,
+.learn .analogy,
+.learn .region-fact,
+.learn .skill-chip,
+.learn .option,
+.learn .match-item,
+.learn .order-card,
+.learn .tap-back,
+.learn .region-dot-label,
+.learn .talking-avatar-bubble,
+.learn .walkthrough-tip,
+.learn .chat-msg.assistant,
+.learn .tool-btn,
+.learn .shape-btn,
+.learn .field input,
+.learn .guide-ask input {
+  --t-text: #2a1a10;
+  color: #2a1a10;
+  text-shadow: none;
+}
+.learn .talking-avatar-bubble { background: rgba(255, 255, 255, 0.92); }
+.learn .option.right, .learn .option.wrong, .learn .option.reveal { color: #2a1a10; }
+.learn .tap-front, .learn .chat-msg.user, .learn .status-chip, .learn .style-tags span, .learn .region-count, .learn .badge-done, .learn .badge-new { text-shadow: none; }
+.learn .region-legend .lg.current { color: #ffffff; background: color-mix(in srgb, var(--t-primary) 45%, transparent); }
+
+/* ═════════ Compact stat tiles & reward items (Home, Progress, Rewards) ═════════ */
+.learn .tiles { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.learn .tile {
+  min-height: 0;
+  padding: 10px 14px;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: 'icon value' 'icon label';
+  align-items: center;
+  align-content: center;
+  justify-items: start;
+  text-align: start;
+  column-gap: 10px;
+  row-gap: 0;
+  border-radius: 16px;
+}
+.learn .tile .tile-emoji { grid-area: icon; font-size: 22px; line-height: 1; }
+.learn .tile strong { grid-area: value; font-size: 17px; line-height: 1.15; }
+.learn .tile small { grid-area: label; font-size: 11.5px; line-height: 1.2; }
+.learn .tile .meter { grid-column: 2; height: 6px; width: 100%; margin-top: 4px; }
+.learn .tile:hover { transform: translateY(-2px); }
+
+/* Rewards */
+.learn .meter.big { height: 12px; }
+.learn .unlock-track { gap: 8px; }
+.learn .unlock-track li { padding: 8px 12px; gap: 10px; border-radius: 14px; }
+.learn .unlock-track .unlock-emoji { font-size: 22px; }
+.learn .unlock-track strong { font-size: 15px; }
+.learn .unlock-track small { font-size: 12px; }
+.learn .achievements { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.learn .achievement { padding: 10px 8px; gap: 2px; border-radius: 14px; }
+.learn .achievement .ach-emoji { font-size: 24px; }
+.learn .achievement strong { font-size: 13.5px; line-height: 1.2; }
+.learn .achievement small { font-size: 11px; }
+
+/* Progress: passport stamps, profile tiles, lists */
+.learn .passport { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+.learn .stamp-card { padding: 10px 8px; }
+.learn .stamp-card .stamp-emoji { font-size: 22px; }
+.learn .stamp-card strong { font-size: 13.5px; }
+.learn .stamp-card small { font-size: 10.5px; }
+.learn .profile-tile { padding: 8px 10px; }
+.learn .profile-tile .profile-emoji { font-size: 20px; }
+.learn .profile-tile strong { font-size: 15px; }
+.learn .progress-list li { padding: 8px 12px; }
+
+@media (max-width: 640px) {
+  .learn .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .learn .tile { min-height: 0; padding: 8px 10px; }
+}
