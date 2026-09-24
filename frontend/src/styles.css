@@ -590,3 +590,13 @@ h1, h2, h3 { font-family: var(--head); line-height: 1.1; margin: 0 0 0.4em; }
 @media (prefers-reduced-motion: reduce) {
   .pattern-slots li, .status-error .pattern-slots, .pattern-ok, .kid-avatar.big { animation: none !important; }
 }
+
+/* Parent: recover a child's secret pattern */
+.pattern-reveal { display: grid; gap: 8px; justify-items: start; }
+.pattern-reveal-row { list-style: none; margin: 0; padding: 0; display: flex; gap: 10px; flex-wrap: wrap; }
+.pattern-reveal-row li { display: grid; justify-items: center; gap: 2px; background: #fff; border: 2px solid #e2d4c1; border-radius: 16px; padding: 8px 12px; min-width: 64px; }
+.pattern-reveal-row li span { font-size: 34px; line-height: 1; }
+.pattern-reveal-row li small { font-weight: 700; color: #8a7760; }
+.pattern-reveal-ask { display: grid; gap: 8px; }
+.pattern-reveal-ask label { display: grid; gap: 4px; font-weight: 800; }
+.pattern-reveal-ask input { padding: 10px 12px; border-radius: 12px; border: 2px solid rgba(0, 0, 0, .15); font: inherit; max-width: 280px; }

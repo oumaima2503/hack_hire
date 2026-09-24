@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, type Child } from '../../api'
 import { useAuth } from '../../auth'
 import { Layout } from '../../components/Layout'
+import { PatternRecovery } from '../../components/PatternRecovery'
 import { AVATARS, FAVORITE_COLORS, ISLANDS, LEARNING_STYLES, REGIONS, RUG_STYLES, WORLDS } from '../../content'
 
 const LABELS: Record<string, string> = {
@@ -19,6 +20,7 @@ export default function ChildEdit() {
   const [themes, setThemes] = useState<{ key: string; name: string; emoji: string }[]>([])
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const [patternMsg, setPatternMsg] = useState<string | null>(null)
 
   useEffect(() => {
     api.experience(childId).then((e) => {
@@ -58,7 +60,6 @@ export default function ChildEdit() {
     }
   }
 
-  const [patternMsg, setPatternMsg] = useState<string | null>(null)
   const resetPattern = async () => {
     if (!window.confirm(`Reset ${child.name}'s secret pattern? They will create a new one with you next time they play.`)) return
     try {
@@ -188,12 +189,15 @@ export default function ChildEdit() {
         <fieldset>
           <legend>🔐 Secret picture pattern</legend>
           <p className="hint">
-            {child.name} opens their own world with a secret picture pattern. You never see it; if it is forgotten, reset it and
-            create a new one together.
+            {child.name} opens their own world with a secret picture pattern. If it is forgotten, you can see it again with your
+            password, or reset it and create a new one together.
           </p>
-          <button type="button" className="btn ghost" onClick={resetPattern}>
-            Reset secret pattern
-          </button>
+          <div className="btn-row">
+            <PatternRecovery childId={childId} childName={child.name} />
+            <button type="button" className="btn ghost" onClick={resetPattern}>
+              Reset secret pattern
+            </button>
+          </div>
           {patternMsg && <p className="good">{patternMsg}</p>}
         </fieldset>
 

@@ -1,9 +1,15 @@
 """Each child's secret picture pattern (e.g. 🐱 → ⭐ → 🚀 → 🦖).
 
 It lets a child open ONLY their own learning world without the parent's password.
-The pattern is never stored or returned: only a salted scrypt hash, bound to the
-child's id. Wrong attempts are counted in the database and lead to a short lock."""
+The pattern is checked against a salted scrypt hash bound to the child's id. A copy is
+also kept ENCRYPTED (server-side key) so the parent can recover it, only after typing
+their password again. Wrong attempts are counted in the database and lead to a short lock."""
+import base64
+import hashlib
+import json
 from datetime import datetime, timedelta, timezone
+
+from cryptography.fernet import Fernet, InvalidToken
 
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -31,6 +37,12 @@ def _now():
     return datetime.now(timezone.utc)
 
 
+def _fernet():
+    key = config.PATTERN_SECRET_KEY or base64.urlsafe_b64encode(
+        hashlib.sha256(("myrugy-pattern:" + config.JWT_SECRET).encode()).digest()).decode()
+    return Fernet(key)
+
+
 def set_pattern(child, pattern):
     if not _valid(pattern):
         raise ApiError(f"Choose {PATTERN_LENGTH} pictures for your secret pattern", 400, code="invalid_pattern")
@@ -38,13 +50,14 @@ def set_pattern(child, pattern):
         raise ApiError("Use at least 2 different pictures", 400, code="invalid_pattern")
     get_repo().update("mk_children", child["id"], {
         "pattern_hash": generate_password_hash(_secret(child["id"], pattern), method="scrypt"),
+        "pattern_secret": _fernet().encrypt(json.dumps({"c": child["id"], "p": pattern}).encode()).decode(),
         "pattern_set_at": now_iso(), "pattern_fails": 0, "pattern_locked_until": None,
     })
 
 
 def clear_pattern(child):
     """Parent reset: the child creates a new pattern next time (with a grown-up)."""
-    get_repo().update("mk_children", child["id"], {"pattern_hash": None, "pattern_set_at": None,
+    get_repo().update("mk_children", child["id"], {"pattern_hash": None, "pattern_secret": None, "pattern_set_at": None,
                                                    "pattern_fails": 0, "pattern_locked_until": None})
 
 
@@ -67,3 +80,18 @@ def verify(child, pattern):
                  "pattern_locked_until": (_now() + timedelta(seconds=config.PATTERN_LOCK_SECONDS)).isoformat()}
     get_repo().update("mk_children", child["id"], patch)
     raise ApiError("Oops! Try your secret pattern again!", 401, code="wrong_pattern")
+
+
+def reveal(child):
+    """The child's pattern, for the parent (the caller has checked the parent's password)."""
+    token = child.get("pattern_secret")
+    if not child.get("pattern_hash") or not token:
+        raise ApiError("This pattern can't be shown. Reset it and create a new one together.", 404, code="not_recoverable")
+    try:
+        data = json.loads(_fernet().decrypt(token.encode()))
+    except (InvalidToken, ValueError):
+        raise ApiError("This pattern can't be shown. Reset it and create a new one together.", 404,
+                       code="not_recoverable") from None
+    if data.get("c") != child["id"] or not _valid(data.get("p")):
+        raise ApiError("This pattern can't be shown. Reset it and create a new one together.", 404, code="not_recoverable")
+    return data["p"]

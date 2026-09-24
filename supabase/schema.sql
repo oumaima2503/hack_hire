@@ -335,6 +335,8 @@ alter table mk_children add column if not exists pattern_hash text;
 alter table mk_children add column if not exists pattern_set_at timestamptz;
 alter table mk_children add column if not exists pattern_fails smallint not null default 0;
 alter table mk_children add column if not exists pattern_locked_until timestamptz;
+-- Encrypted copy (server-side key) so the parent can recover the pattern with their password.
+alter table mk_children add column if not exists pattern_secret text;
 
 -- Access model: the browser never talks to Supabase directly. Only the Flask API
 -- (service-role key) reads/writes, after checking parent → owns child → child pass.

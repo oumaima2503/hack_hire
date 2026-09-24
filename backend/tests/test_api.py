@@ -839,3 +839,24 @@ def test_only_the_pattern_opens_a_world_parent_resets_and_deletes(app):
     assert c.get(f"/api/children/{cid}/experience").status_code == 404
     assert all(k["id"] != cid for k in c.get("/api/parents/dashboard").json["children"])
 
+
+def test_parent_recovers_pattern_only_with_password(app):
+    c = register(app)
+    cid = make_child(c)
+    c.post(f"/api/children/{cid}/pattern", {"pattern": PATTERN})
+    url = f"/api/parents/children/{cid}/pattern/reveal"
+    assert c.post(url, {"password": "nope"}).json["code"] == "wrong_password"
+    assert c.post(url, {"password": "weave1234"}).json["pattern"] == PATTERN
+    # Stored encrypted, never in plain text, and never in the parent's normal views
+    row = app.extensions["repo"].get("mk_children", cid)
+    assert "rocket" not in row["pattern_secret"] and "rocket" not in row["pattern_hash"]
+    assert "pattern_secret" not in str(c.get(f"/api/parents/children/{cid}").json)
+    assert "rocket" not in str(c.get("/api/parents/dashboard").json)
+    # Child mode / other families / reset patterns can't be revealed
+    other = register(app, email="other@example.com")
+    assert other.post(url, {"password": "weave1234"}).status_code == 404
+    c.post("/api/auth/parent-mode/lock")
+    assert c.post(url, {"password": "weave1234"}).json["code"] == "parent_locked"
+    c.post("/api/auth/parent-mode/unlock", {"password": "weave1234"})
+    c.delete(f"/api/children/{cid}/pattern")
+    assert c.post(url, {"password": "weave1234"}).json["code"] == "not_recoverable"

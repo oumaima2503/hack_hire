@@ -429,6 +429,8 @@ export const api = {
   // secret picture pattern: each child opens only their own world
   setPattern: (id: string, pattern: string[]) => call<{ ok: boolean; child: Child }>('POST', `${c(id)}/pattern`, { pattern }),
   resetPattern: (id: string) => call<{ ok: boolean }>('DELETE', `${c(id)}/pattern`),
+  /** Parent recovery: needs parent mode AND the password again. */
+  revealPattern: (id: string, password: string) => call<{ pattern: string[] }>('POST', `/parents/children/${id}/pattern/reveal`, { password }),
   enterChild: (id: string, pattern: string[]) => call<{ ok: boolean; child: Child }>('POST', `${c(id)}/enter`, { pattern }),
 
   // child (onboarding + learning)

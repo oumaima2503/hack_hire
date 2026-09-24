@@ -2,6 +2,10 @@ from flask import Blueprint, g, jsonify
 
 from middleware import get_repo
 from middleware.auth import parent_child_route, parent_only_route
+from middleware.rate_limit import by_ip, by_parent, rate_limit
+from services import pattern_service
+from services.auth_service import verify_password
+from validators import ApiError
 from services import children_service as cs
 from services.auth_service import public_parent
 from validators import json_body, require
@@ -48,3 +52,14 @@ def update_child(child_id):
 def delete_child(child_id):
     cs.delete_child(g.child["id"])
     return "", 204
+
+
+@bp.post("/children/<child_id>/pattern/reveal")
+@parent_child_route
+@rate_limit(("unlock", by_ip), ("unlock", by_parent))
+def reveal_pattern(child_id):
+    """Pattern recovery: parent mode AND the password typed again, for this one request."""
+    password = str(json_body().get("password") or "")[:128]
+    if not verify_password(g.parent.get("password_hash"), password):
+        raise ApiError("That password isn't right", 401, code="wrong_password")
+    return jsonify(pattern=pattern_service.reveal(g.child))

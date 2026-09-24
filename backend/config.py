@@ -43,6 +43,10 @@ PARENT_UNLOCK_MINUTES = _int("PARENT_UNLOCK_MINUTES", 10)
 CHILD_COOKIE = "mr_child"
 PATTERN_MAX_FAILS = _int("PATTERN_MAX_FAILS", 5)        # wrong patterns before a short break
 PATTERN_LOCK_SECONDS = _int("PATTERN_LOCK_SECONDS", 120)
+# Encrypts a recoverable copy of each pattern (parents can reveal it with their password).
+# Set a Fernet key in production (python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())");
+# without it a key is derived from JWT_SECRET (rotating JWT_SECRET then makes old patterns unrecoverable).
+PATTERN_SECRET_KEY = os.getenv("PATTERN_SECRET_KEY", "").strip()
 COOKIE_SECURE = _bool("COOKIE_SECURE", PRODUCTION)
 
 # ── Points (configurable: POINTS_CONFIG='{"lesson_completed": 15}') ──
