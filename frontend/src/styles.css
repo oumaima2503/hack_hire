@@ -514,3 +514,79 @@ h1, h2, h3 { font-family: var(--head); line-height: 1.1; margin: 0 0 0.4em; }
 .pick-child-emoji { font-size: 38px; line-height: 1; }
 .pick-child-btn strong { font-size: 17px; }
 .pick-child-btn small { color: var(--ink-soft, #6b5a4a); font-weight: 700; }
+
+/* ───────── Secret picture pattern (mini-game) ───────── */
+.pattern-pad { display: grid; gap: 16px; justify-items: center; }
+.pattern-slots { list-style: none; margin: 0; padding: 0; display: flex; gap: 10px; align-items: center; }
+.pattern-slots li { position: relative; width: 64px; height: 64px; border-radius: 20px; display: grid; place-items: center; font-size: 34px;
+  background: rgba(255, 255, 255, .85); border: 3px dashed #d9c9b3; margin-right: 22px; transition: transform .15s; }
+.pattern-slots li:last-child { margin-right: 0; }
+.pattern-slots li.filled { border-style: solid; border-color: var(--accent, #e07a3f); background: #fff; animation: pattern-pop .25s ease-out; }
+.pattern-slots li.next { border-color: var(--accent, #e07a3f); animation: pattern-glow 1.2s ease-in-out infinite; }
+.pattern-arrow { position: absolute; right: -24px; font-size: 18px; color: #b9a58c; font-weight: 900; }
+.status-error .pattern-slots { animation: pattern-shake .45s ease-in-out; }
+.status-error .pattern-slots li.filled { border-color: #e53935; background: #ffe9e9; }
+.status-success .pattern-slots li.filled { border-color: #3cb371; background: #e9f9ee; animation: pattern-hop .5s ease-in-out 2; }
+.pattern-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; width: min(420px, 100%); }
+.pattern-btn { aspect-ratio: 1; border: 0; border-radius: 22px; background: #fff; font-size: clamp(34px, 8vw, 46px); cursor: pointer;
+  box-shadow: 0 5px 0 #e2d4c1, 0 8px 16px rgba(0, 0, 0, .12); transition: transform .1s, box-shadow .1s; touch-action: manipulation; }
+.pattern-btn:hover:not(:disabled) { transform: translateY(-3px); }
+.pattern-btn:active:not(:disabled) { transform: translateY(3px) scale(.96); box-shadow: 0 2px 0 #e2d4c1; }
+.pattern-btn:disabled { opacity: .55; cursor: default; }
+.pattern-tools { display: flex; gap: 8px; }
+.pattern-creator { display: grid; gap: 12px; justify-items: center; text-align: center; }
+.pattern-progress { list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; }
+.pattern-progress li { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; background: #eee3d6; color: #8a7760; }
+.pattern-progress li.now { background: var(--accent, #e07a3f); color: #fff; transform: scale(1.1); }
+.pattern-progress li.done { background: #3cb371; color: #fff; }
+.pattern-instruction { margin: 0; font-weight: 900; font-size: 19px; text-align: center; }
+.pattern-message { margin: 0; font-weight: 800; color: #c62839; text-align: center; animation: pop .25s ease-out; }
+.pattern-message.good { color: #2e9d4f; }
+.pattern-tip { margin: 0; font-size: 13px; font-weight: 700; color: #8a7760; }
+.pattern-ok { font-size: 22px; font-weight: 900; color: #2e9d4f; margin: 8px 0; animation: pattern-hop .5s ease-in-out 2; }
+.pattern-step { display: grid; gap: 14px; }
+.pattern-step h2 { text-align: center; }
+@keyframes pattern-pop { from { transform: scale(.6); } to { transform: scale(1); } }
+@keyframes pattern-glow { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent, #e07a3f) 30%, transparent); } }
+@keyframes pattern-shake { 20%, 60% { transform: translateX(-10px); } 40%, 80% { transform: translateX(10px); } }
+@keyframes pattern-hop { 50% { transform: translateY(-8px); } }
+
+/* ───────── Kids' corner ───────── */
+.kids-corner { display: grid; justify-items: center; padding: 10px 0 40px; }
+.kids-pick, .kids-enter { width: min(620px, 100%); display: grid; gap: 18px; justify-items: center; text-align: center; }
+.kids-profiles { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
+.kid-profile { display: grid; justify-items: center; gap: 6px; width: 140px; padding: 18px 12px; border: 0; border-radius: 24px; background: #fff; cursor: pointer;
+  box-shadow: 0 6px 0 #e2d4c1, 0 10px 20px rgba(0, 0, 0, .12); transition: transform .15s; font: inherit; color: #2a1a10; }
+.kid-profile:hover { transform: translateY(-4px) rotate(-1deg); }
+.kid-profile strong { font-size: 18px; }
+.kid-avatar { font-size: 54px; line-height: 1; }
+.kid-avatar.big { font-size: 72px; animation: bob 3s ease-in-out infinite; }
+.kids-who { display: grid; justify-items: center; gap: 4px; }
+.kids-who h1 { margin: 0; }
+.kids-back { justify-self: start; }
+.kids-parent-link { margin: 0; font-weight: 800; }
+.switch-explorer { border: 0; background: rgba(255, 255, 255, .2); color: #fff; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; font-size: 16px; margin-left: 4px; }
+.switch-explorer:hover { background: rgba(255, 255, 255, .35); }
+
+/* ───────── Parent dashboard: summary, danger zone, delete dialog, toast ───────── */
+.child-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 8px 0; }
+.child-summary div { background: rgba(0, 0, 0, .04); border-radius: 12px; padding: 8px 10px; }
+.child-summary dt { font-size: 12px; font-weight: 800; opacity: .7; }
+.child-summary dd { margin: 2px 0 0; font-weight: 900; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.danger-zone { display: flex; justify-content: flex-end; margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(0, 0, 0, .15); }
+.btn.danger { background: #fde3dc; color: #8c2a10; border: 2px solid #f1b5a3; }
+.btn.danger:hover:not(:disabled) { background: #f9cbbd; }
+.delete-modal { text-align: center; max-width: 480px; background: #fff; color: #2a1a10; }
+.delete-modal h2 { margin: 6px 0 10px; }
+.btn-row.center { justify-content: center; }
+.parent-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 90; padding: 12px 18px; border-radius: 14px; font-weight: 800;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .25); animation: pop .25s ease-out; }
+.parent-toast.good { background: #e9f9ee; color: #1e6b3a; }
+.parent-toast.error { background: #ffe9e9; color: #8c1d1d; }
+@media (max-width: 480px) {
+  .pattern-slots li { width: 52px; height: 52px; font-size: 28px; margin-right: 16px; }
+  .pattern-arrow { right: -17px; font-size: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pattern-slots li, .status-error .pattern-slots, .pattern-ok, .kid-avatar.big { animation: none !important; }
+}

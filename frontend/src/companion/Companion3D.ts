@@ -62,6 +62,7 @@ export class Companion3D {
   private t = 0
   private state: CompanionState = 'idle'
   private speaking = false
+  private voiceLevel: number | null = null
   private pulse = 0
   private facing = 1
   private yaw = 0.5
@@ -102,6 +103,10 @@ export class Companion3D {
   }
   setSpeaking(on: boolean) {
     this.speaking = on
+  }
+  /** Loudness (0..1) of the Gemini voice while it plays; null = use the procedural mouth. */
+  setVoiceLevel(level: number | null) {
+    this.voiceLevel = level
   }
   /** Called on each spoken word: gives the mouth a natural "syllable" pop. */
   syllable() {
@@ -404,7 +409,7 @@ export class Companion3D {
 
     // ── mouth: syllable pops + a natural wobble while the voice plays ──
     this.pulse = Math.max(0, this.pulse - dt * 6)
-    const open = this.speaking ? 0.3 + 0.45 * Math.abs(Math.sin(t * 13 + Math.sin(t * 4.3) * 2)) + this.pulse * 0.5 : w.listen * 0.15
+    const open = this.voiceLevel !== null ? Math.min(1.1, 0.08 + this.voiceLevel * 1.6) : this.speaking ? 0.3 + 0.45 * Math.abs(Math.sin(t * 13 + Math.sin(t * 4.3) * 2)) + this.pulse * 0.5 : w.listen * 0.15
     this.talk = damp(this.talk, open, 22, dt)
     r.mouth.scale.set(1.5 - this.talk * 0.3, 0.12 + this.talk * 1.25, 0.55)
 

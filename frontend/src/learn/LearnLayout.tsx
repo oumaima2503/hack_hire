@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type CSSProperties } from 'react'
 import { NavLink, Outlet, useNavigate, useParams } from 'react-router-dom'
-import { api, ApiError, type Award, type Experience } from '../api'
+import { api, ApiError, CHILD_LOCKED_EVENT, type Award, type Experience } from '../api'
 import { ParentPasswordForm } from '../components/ParentGate'
 import { SoundToggle } from '../components/SoundToggle'
 import { avatarEmoji } from '../content'
@@ -11,6 +11,7 @@ import { ThemeScene } from './ThemeScene'
 
 import { AppWalkthrough } from '../guide/AppWalkthrough'
 import { CompanionProvider, useCompanion } from '../companion/Companion'
+import { PageProvider } from '../companion/PageContext'
 import { companionText, pickLine } from '../companion/companionText'
 
 /** The child's personalised world: every colour, icon, word and particle comes from /experience. */
@@ -38,17 +39,29 @@ export default function LearnLayout() {
       },
       (e) => {
         if (e instanceof ApiError && e.status === 404) navigate('/parent', { replace: true })
+        else if (e instanceof ApiError && e.code === 'child_locked') navigate(`/kids?child=${childId}`, { replace: true })
         else setError(e.message)
       },
     )
   }, [childId, navigate])
 
-  useEffect(refresh, [refresh])
+  // Entering a child's world always switches to child mode FIRST, then loads it: without this child's
+  // pass (their secret pattern), the API refuses and the child goes to the pattern game.
+  useEffect(() => {
+    api
+      .parentLock()
+      .catch(() => undefined)
+      .finally(refresh)
+  }, [refresh])
+
+  // This child's world was closed (e.g. another child entered their pattern): back to the pattern game.
+  useEffect(() => {
+    const onLocked = () => navigate(`/kids?child=${childId}`, { replace: true })
+    window.addEventListener(CHILD_LOCKED_EVENT, onLocked)
+    return () => window.removeEventListener(CHILD_LOCKED_EVENT, onLocked)
+  }, [childId, navigate])
 
   // Opening a child's play area switches to child mode: parent pages need the password again.
-  useEffect(() => {
-    api.parentLock().catch(() => undefined)
-  }, [])
 
   const celebrate = useCallback(
     (a: Award | null | undefined) => {
@@ -84,6 +97,7 @@ export default function LearnLayout() {
 
   return (
     <LearnContext.Provider value={{ childId, exp, refresh, celebrate, focus, setFocus }}>
+      <PageProvider>
       <CompanionProvider>
       <div className={`learn theme-${t.key}`} style={style} dir="ltr" lang="en">
         <ThemeBackdrop theme={t} />
@@ -97,6 +111,7 @@ export default function LearnLayout() {
                 {t.emoji} {t.name} · {exp.difficulty.label}
               </small>
             </div>
+            <NavLinkSwitch />
           </div>
           <div className="learn-stats">
             <span className="stat-pill" title={`${p.total_points} ${t.vocab.points}`}>
@@ -109,6 +124,7 @@ export default function LearnLayout() {
             <button className="stat-pill grownups" onClick={() => setShowWalkthrough(true)} title="Watch App Walkthrough">
               ❓ Tour
             </button>
+            <ChildLangSwitch childId={childId} current={exp.child.language ?? 'en'} onChanged={refresh} />
             <SoundToggle className="stat-pill" />
             <button className="stat-pill grownups" onClick={() => setGate(true)}>
               👨‍👩‍👧 Grown-ups
@@ -145,7 +161,49 @@ export default function LearnLayout() {
         />
       </div>
       </CompanionProvider>
+      </PageProvider>
     </LearnContext.Provider>
+  )
+}
+
+const CHILD_LANGS: { key: 'en' | 'fr' | 'ar'; label: string; name: string }[] = [
+  { key: 'en', label: 'EN', name: 'English' },
+  { key: 'fr', label: 'FR', name: 'Français' },
+  { key: 'ar', label: 'ع', name: 'العربية' },
+]
+
+/** The child picks the language their companion talks, listens and answers in. */
+function ChildLangSwitch({ childId, current, onChanged }: { childId: string; current: string; onChanged: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const choose = async (key: 'en' | 'fr' | 'ar') => {
+    if (key === current || busy) return
+    setBusy(true)
+    try {
+      await api.updateChild(childId, { language: key })
+      onChanged()
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="stat-pill lang-pill" role="group" aria-label="Language">
+      <span aria-hidden="true">🌐</span>
+      {CHILD_LANGS.map((l) => (
+        <button key={l.key} className={l.key === current ? 'on' : ''} onClick={() => choose(l.key)} aria-pressed={l.key === current} title={l.name} disabled={busy}>
+          {l.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** Back to the kids' corner (another child plays their own secret pattern). */
+function NavLinkSwitch() {
+  const navigate = useNavigate()
+  return (
+    <button className="switch-explorer" onClick={() => navigate('/kids')} title="Switch explorer" aria-label="Switch explorer">
+      🔄
+    </button>
   )
 }
 

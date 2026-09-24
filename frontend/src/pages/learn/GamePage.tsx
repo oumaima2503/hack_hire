@@ -1,12 +1,20 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { api, type GameSummary } from '../../api'
 import { GamePlayer } from '../../games/GamePlayer'
 import { useLearn } from '../../learn/LearnContext'
+import { usePageDescriptor } from '../../companion/PageContext'
+import { pages } from '../../companion/pageDescriptors'
 
 /** Replay a game on its own (from the journey list). New players meet games inside lessons. */
 export default function GamePage() {
   const { key = '' } = useParams()
-  const { setFocus } = useLearn()
+  const { childId, exp, setFocus } = useLearn()
+  const [info, setInfo] = useState<GameSummary | null>(null)
+  useEffect(() => {
+    api.games(childId).then((gs) => setInfo(gs.find((g) => g.key === key) ?? null), () => setInfo(null))
+  }, [childId, key])
+  usePageDescriptor(() => pages.game(exp, info && { title: info.title, type: info.type }), [exp, info])
 
   useEffect(() => {
     setFocus({ gameKey: key })

@@ -58,6 +58,17 @@ export default function ChildEdit() {
     }
   }
 
+  const [patternMsg, setPatternMsg] = useState<string | null>(null)
+  const resetPattern = async () => {
+    if (!window.confirm(`Reset ${child.name}'s secret pattern? They will create a new one with you next time they play.`)) return
+    try {
+      await api.resetPattern(childId)
+      setPatternMsg('🔐 Secret pattern reset. It will be created again with you next time.')
+    } catch (err) {
+      setPatternMsg(err instanceof Error ? err.message : 'Could not reset the pattern')
+    }
+  }
+
   const remove = async () => {
     if (!window.confirm(`Delete ${child.name}'s profile and all their progress, rugs and chats? This cannot be undone.`)) return
     await api.deleteChild(childId)
@@ -172,6 +183,18 @@ export default function ChildEdit() {
               </button>
             ))}
           </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>🔐 Secret picture pattern</legend>
+          <p className="hint">
+            {child.name} opens their own world with a secret picture pattern. You never see it; if it is forgotten, reset it and
+            create a new one together.
+          </p>
+          <button type="button" className="btn ghost" onClick={resetPattern}>
+            Reset secret pattern
+          </button>
+          {patternMsg && <p className="good">{patternMsg}</p>}
         </fieldset>
 
         {error && <p className="error">{error}</p>}

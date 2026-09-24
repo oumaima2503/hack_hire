@@ -4,6 +4,8 @@ import { api, type GameSummary, type LessonSummary } from '../../api'
 import { avatarEmoji } from '../../content'
 import { useLearn } from '../../learn/LearnContext'
 import { RegionMap } from '../../learn/RegionMap'
+import { usePageDescriptor } from '../../companion/PageContext'
+import { pages } from '../../companion/pageDescriptors'
 
 /** The 8-stage Learn & Play path: each stage = video → practice game → discover → quiz. */
 export function Journey({ lessons, games = [] }: { lessons: LessonSummary[]; games?: GameSummary[] }) {
@@ -53,6 +55,7 @@ export default function JourneyPage() {
   const { childId, exp } = useLearn()
   const [lessons, setLessons] = useState<LessonSummary[]>([])
   const [games, setGames] = useState<GameSummary[]>([])
+  usePageDescriptor(() => pages.learn(exp, lessons.filter((l) => l.unlocked).length, lessons.length || 8), [exp, lessons])
   useEffect(() => {
     api.lessons(childId).then(setLessons, () => setLessons([]))
     api.games(childId).then(setGames, () => setGames([]))

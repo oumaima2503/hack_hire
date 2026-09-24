@@ -13,11 +13,12 @@ import {
 import { confetti, confettiFrom, sfx, speak, stopSpeaking } from '../fun'
 import { LANG_FLAGS, LANG_NAMES, useI18n, type I18nKey } from '../i18n'
 import { useSession, useTrack } from '../state'
+import { PatternCreator } from '../components/PatternPad'
 
-const STOPS = ['🔑', '🧭', '🎂', '🏝️', '🌍', '🎨', '💬', '🧩', '🌟']
-// 0 consent · 1 name · 2 age · 3 interests · 4 world · 5 learning style · 6 language · 7 mini-challenges · 8 learning profile
-const RUGY_LINES: I18nKey[] = ['s0_rugy', 's1_rugy', 's2_rugy', 's3_rugy', 'sw_rugy', 'sl_rugy', 's5_rugy', 's4_rugy', 'pr_rugy']
-const TITLES: I18nKey[] = ['s0_title', 's1_title', 's2_title', 's3_title', 'sw_title', 'sl_title', 's5_title', 's4_title', 'pr_title']
+const STOPS = ['🔑', '🧭', '🎂', '🏝️', '🌍', '🎨', '💬', '🧩', '🌟', '🔐']
+// 0 consent · 1 name · 2 age · 3 interests · 4 world · 5 learning style · 6 language · 7 mini-challenges · 8 learning profile · 9 secret pattern
+const RUGY_LINES: I18nKey[] = ['s0_rugy', 's1_rugy', 's2_rugy', 's3_rugy', 'sw_rugy', 'sl_rugy', 's5_rugy', 's4_rugy', 'pr_rugy', 'pt_rugy']
+const TITLES: I18nKey[] = ['s0_title', 's1_title', 's2_title', 's3_title', 'sw_title', 'sl_title', 's5_title', 's4_title', 'pr_title', 'pt_title']
 
 export default function Onboarding() {
   const { session, update, reset } = useSession()
@@ -117,6 +118,7 @@ export default function Onboarding() {
             {step === 6 && <StepLanguage {...props} />}
             {step === 7 && <StepChallenges {...props} />}
             {step === 8 && <StepProfile />}
+            {step === 9 && <StepPattern />}
           </div>
           {error && (
             <p className="error" role="alert">
@@ -742,19 +744,15 @@ function StepChallenges({ busy, save, goBack, setMood }: StepProps) {
   )
 }
 
-/** Step 8: the personalised Learning Profile, then the adventure begins. */
+/** Step 8: the personalised Learning Profile, then the secret pattern. */
 function StepProfile() {
   const { t, lang } = useI18n()
-  const { session } = useSession()
-  const track = useTrack()
-  const navigate = useNavigate()
+  const { session, update } = useSession()
   const p = session.profile
 
   const start = () => {
-    sfx.yay()
-    confetti()
-    track('onboarding_completed', 8, { language: lang })
-    setTimeout(() => navigate(`/play/${session.childId}`), 700) // let the confetti fly first
+    sfx.whoosh()
+    update({ step: 9 })
   }
 
   return (
@@ -769,6 +767,44 @@ function StepProfile() {
         <span />
         <button className="btn primary big ready-bounce" onClick={start}>
           🚀 {t('pr_start')}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/** Step 9: the child creates (and confirms) their secret picture pattern, then the adventure begins. */
+function StepPattern() {
+  const { t, lang } = useI18n()
+  const { session, update } = useSession()
+  const track = useTrack()
+  const navigate = useNavigate()
+  const [done, setDone] = useState(false)
+
+  const start = () => {
+    sfx.yay()
+    confetti()
+    track('onboarding_completed', 9, { language: lang })
+    setTimeout(() => navigate(`/play/${session.childId}`), 700) // let the confetti fly first
+  }
+
+  return (
+    <div className="pattern-step">
+      <h2>🔐 {t('pt_title')}</h2>
+      <PatternCreator
+        texts={{ pick: t('pt_pick'), confirm: t('pt_confirm'), ok: t('pt_ok'), mismatch: t('pt_mismatch'), tip: t('pt_tip'), undo: t('pt_undo'), again: t('pt_again') }}
+        onDone={async (pattern) => {
+          await api.setPattern(session.childId!, pattern) // also opens this child's world
+          confetti()
+          setDone(true)
+        }}
+      />
+      <div className="step-nav">
+        <button type="button" className="btn ghost" onClick={() => update({ step: 8 })}>
+          ⬅
+        </button>
+        <button className={`btn primary big${done ? ' ready-bounce' : ''}`} onClick={start} disabled={!done}>
+          🚀 {t('pt_start')}
         </button>
       </div>
     </div>

@@ -7,9 +7,12 @@ import { RegionMap } from '../../learn/RegionMap'
 import { Journey } from './Journey'
 
 import { TalkingAvatar } from '../../components/TalkingAvatar'
+import { usePageDescriptor } from '../../companion/PageContext'
+import { pages } from '../../companion/pageDescriptors'
 
 export default function Home() {
   const { childId, exp } = useLearn()
+  usePageDescriptor(() => pages.home(exp), [exp])
   const [lessons, setLessons] = useState<LessonSummary[]>([])
   const [games, setGames] = useState<GameSummary[]>([])
   const t = exp.theme

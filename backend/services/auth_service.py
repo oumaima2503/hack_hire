@@ -46,6 +46,26 @@ def check_parent_unlock(token, parent_id, session_jti):
     return claims["role"] == "parent_unlock" and claims["sub"] == parent_id and claims["sid"] == session_jti
 
 
+def issue_child_access(parent_id, child_id, session_jti):
+    """Proof that this child entered their secret pattern during this login session."""
+    now = datetime.now(timezone.utc)
+    claims = {"sub": parent_id, "cid": child_id, "sid": session_jti, "role": "child_access", "jti": uuid.uuid4().hex,
+              "iat": now, "exp": now + timedelta(hours=config.JWT_TTL_HOURS), "iss": config.JWT_ISSUER}
+    return jwt.encode(claims, config.JWT_SECRET, algorithm=config.JWT_ALGORITHM)
+
+
+def check_child_access(token, parent_id, child_id, session_jti):
+    if not token:
+        return False
+    try:
+        claims = jwt.decode(token, config.JWT_SECRET, algorithms=[config.JWT_ALGORITHM], issuer=config.JWT_ISSUER,
+                            options={"require": ["sub", "cid", "sid", "exp", "role"]})
+    except jwt.InvalidTokenError:
+        return False
+    return (claims["role"] == "child_access" and claims["sub"] == parent_id and claims["cid"] == child_id
+            and claims["sid"] == session_jti)
+
+
 def decode_token(token):
     """Raises jwt.InvalidTokenError on any problem (signature, expiry, issuer…)."""
     return jwt.decode(token, config.JWT_SECRET, algorithms=[config.JWT_ALGORITHM], issuer=config.JWT_ISSUER,

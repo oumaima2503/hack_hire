@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import { api, type RewardsOverview } from '../../api'
 import { useLearn } from '../../learn/LearnContext'
+import { usePageDescriptor } from '../../companion/PageContext'
+import { pages } from '../../companion/pageDescriptors'
 
 export default function Rewards() {
   const { childId, exp, refresh } = useLearn()
+  usePageDescriptor(() => pages.rewards(exp), [exp])
   const [data, setData] = useState<RewardsOverview | null>(null)
   const v = exp.theme.vocab
 

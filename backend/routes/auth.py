@@ -4,8 +4,8 @@ from flask import Blueprint, g, jsonify, make_response
 
 import config
 from middleware import get_repo
-from middleware.auth import (authenticate_parent, clear_parent_unlock, parent_route, parent_unlocked,
-                             set_parent_unlock)
+from middleware.auth import (authenticate_parent, clear_child_access, clear_parent_unlock, parent_route,
+                             parent_unlocked, set_parent_unlock)
 from middleware.rate_limit import by_ip, by_parent, rate_limit
 from repository import now_iso
 from services.auth_service import decode_token, hash_password, issue_token, public_parent, verify_password
@@ -25,8 +25,8 @@ def _with_session(payload, parent, status=200):
     res = make_response(jsonify(payload), status)
     res.set_cookie(config.AUTH_COOKIE, token, httponly=True, secure=config.COOKIE_SECURE, samesite="Strict",
                    path="/api", max_age=config.JWT_TTL_HOURS * 3600)
-    # The parent just typed their password: start in parent mode.
-    return set_parent_unlock(res, parent["id"], decode_token(token)["jti"])
+    # The parent just typed their password: start in parent mode (and no child is inside yet).
+    return clear_child_access(set_parent_unlock(res, parent["id"], decode_token(token)["jti"]))
 
 
 def _mask_email(email):
@@ -107,4 +107,4 @@ def logout():
     get_repo().insert("mk_revoked_tokens", {"jti": g.claims["jti"], "expires_at": exp})
     res = make_response(jsonify(ok=True))
     res.delete_cookie(config.AUTH_COOKIE, path="/api", samesite="Strict", secure=config.COOKIE_SECURE, httponly=True)
-    return clear_parent_unlock(res)
+    return clear_child_access(clear_parent_unlock(res))

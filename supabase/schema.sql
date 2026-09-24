@@ -325,3 +325,20 @@ alter table mk_regions enable row level security;
 --             "visual_matching": …, "material_recognition": …}, "assessed_at": "…"}
 -- ═══════════════════════════════════════════════════════════════════
 alter table mk_children add column if not exists learning_profile jsonb;
+
+-- ═══════════════════════════════════════════════════════════════════
+-- v5 · Child secret picture pattern (idempotent)
+-- Each child opens only their own learning world with a secret picture sequence.
+-- Only a salted scrypt hash is stored (bound to the child id), never the pattern.
+-- ═══════════════════════════════════════════════════════════════════
+alter table mk_children add column if not exists pattern_hash text;
+alter table mk_children add column if not exists pattern_set_at timestamptz;
+alter table mk_children add column if not exists pattern_fails smallint not null default 0;
+alter table mk_children add column if not exists pattern_locked_until timestamptz;
+
+-- Access model: the browser never talks to Supabase directly. Only the Flask API
+-- (service-role key) reads/writes, after checking parent → owns child → child pass.
+-- RLS is on for every table with NO policies, so the public anon/authenticated roles
+-- cannot read, change or delete any child (or any pattern hash), whatever ids they send.
+alter table mk_children enable row level security;
+revoke all on mk_children from anon, authenticated;

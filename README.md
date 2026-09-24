@@ -41,7 +41,11 @@ Open http://localhost:5173. Tests: `cd backend && python -m pytest -q`.
 | `MEMORY_DB_PATH` | In-memory mode: saves accounts and progress to a JSON file |
 | `JWT_SECRET` | ≥ 32 characters. **Required** when `APP_ENV=production` |
 | `COOKIE_SECURE` | `true` behind HTTPS |
-| `GEMINI_API_KEY`, `GEMINI_MODEL` | AI tutor. Without a key, a built-in offline helper answers from the lesson hints |
+| `GEMINI_API_KEY` | AI tutor and voice. Without a key, a built-in offline helper answers with a few fixed facts |
+| `GEMINI_MODEL`, `GEMINI_FALLBACK_MODELS`, `GEMINI_THINKING` | Text model: `gemini-3.6-flash` by default. The fallbacks are tried when a model is retired or busy (HTTP 404/429/5xx). `low` thinking gives faster answers |
+| `GEMINI_TTS_MODEL`, `GEMINI_TTS_VOICE`, `GEMINI_TTS_SPLIT` | The companion's voice: `gemini-3.8-flash-lite-tts` with the `Puck` voice, plus two fallback TTS models. The browser voice is the last fallback. `GEMINI_TTS_SPLIT=true` starts the voice sooner but uses 2 requests per answer, so only turn it on with billing |
+
+**Free tier limits:** Gemini's free tier allows about 20 text requests and 10 voice requests per model per day. A model that hits its limit is rested until the limit resets, and the next model is used; when all are used up, the companion answers from its offline helper in the child's language. For real use, enable billing on the Google AI project.
 | `POINTS_CONFIG`, `POINTS_PER_LEVEL`, `RUG_POINTS_DAILY_CAP` | Configurable points values |
 
 ## Supabase
@@ -65,6 +69,13 @@ Row-level security is on for every table with no policies, so only the backend's
   - Opening a child's play area locks parent mode, and the "Grown-ups" button asks for the password.
   - The unlock is a separate httpOnly cookie (`mr_parent`), bound to the login session, with an idle timeout of `PARENT_UNLOCK_MINUTES` (10 by default). It is rate-limited and checked by the API on every parent route, so typing URLs doesn't bypass it.
   - In child mode, children can still play, talk to their companion and switch their world.
+- **Secret picture pattern per child**: each child opens only their own world by tapping 4 pictures (🐱 → ⭐ → 🚀 → 🦖) in the Kids' corner (`/kids`).
+  - The pattern is created and confirmed at the end of onboarding (step 9).
+  - Only a salted scrypt hash bound to the child id is stored (`mk_children.pattern_hash`), never the pattern, and the API never returns it.
+  - The right pattern gives a **child pass**: an httpOnly `mr_child` cookie for that one child, bound to the login session.
+  - Every child-data route checks: parent owns the child, then (this child's pass or parent mode). Child A's pass returns `403 child_locked` for child B.
+  - Wrong patterns are rate-limited, and after 5 misses there is a 2-minute break (`PATTERN_MAX_FAILS`, `PATTERN_LOCK_SECONDS`).
+  - The pattern is the **only** way into a child's world, even for parents: the parent area has no Play button, and opening a world always switches to child mode first. Parents can reset a forgotten pattern (Edit page, then it is re-created with them in the Kids' corner) and delete a child from the dashboard after a confirmation.
 - **Validation**: every input is validated against a whitelist and sanitised.
 - **Server-side checks**: quiz answers never reach the browser, and game results and points are checked on the server.
 - **Gemini** is called only by the backend. The child's name is never sent, emails and phone numbers are removed, strict safety settings apply, quiz mode gives hints rather than answers, and parents can read every conversation.
@@ -115,6 +126,13 @@ The buddy chosen during onboarding (fox, camel, owl, turtle, lion, monkey, dino,
   3. The answer is adapted to the child's age, level, learning profile and context, in "spoken" style.
   4. It is read aloud while the character animates.
   - Typing is the fallback when the microphone is unavailable. Only text reaches the server, never audio.
+- **Answers and voice:** a Gemini text model writes the answer, which is shown in the bubble at once. Gemini TTS then speaks it: the first sentence and the rest are synthesised in parallel so the voice starts sooner, and the 3D mouth follows the real audio loudness. Only the companion's own stored answers can be voiced (`POST /api/chat/speech`), and they are cached for replays. `GET /api/health` shows whether the AI is enabled and which model answered.
+- **The child's name:** the companion can greet the child and say their first name, but the name is never sent to Gemini. Gemini sees a placeholder (`⟪name⟫`), and the server puts the real name back into the answer.
+- **Page awareness:** every child page registers a short descriptor in `companion/PageContext.tsx` and `pageDescriptors.ts`. It lists what is visible, the available actions, where the child can go, page details and the last pages visited. It is sent with each question, so the companion can say "tap the 💡 button" or "go to Rewards". The server sanitises it: only short plain strings, capped lists, anything instruction-like dropped, and it is framed to Gemini as data.
+- **Guardrails** (`backend/services/guardrails.py`, EN/FR/AR):
+  - Before the AI: unsafe topics (violence, adult content, drugs), attempts to change the companion's rules and shared personal details get a kind, fixed reply, and Gemini is not called. A child who seems upset is told to talk to a grown-up they trust.
+  - After the AI: replies that ask for personal information, contain links or unsafe words are replaced or cleaned.
+  - The system prompt also keeps the companion on topic, age-appropriate and encouraging, and tells it never to ask personal questions.
 - **Games are unchanged:** the in-game Guide uses the companion as its body and voice. Hints, reactions and the game engine are untouched.
 - **Lessons:** the Watch → Practice → Discover → Quiz → Done steps are shown as a road map, with the child's avatar on the current stop.
 

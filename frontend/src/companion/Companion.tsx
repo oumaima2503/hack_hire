@@ -3,10 +3,12 @@ import { createPortal } from 'react-dom'
 import { useLocation } from 'react-router-dom'
 import { api } from '../api'
 import { avatarEmoji } from '../content'
-import { sfx, speak, stopSpeaking } from '../fun'
+import { hasVoiceFor, sfx, soundOn, speak, stopSpeaking } from '../fun'
 import { useLearn } from '../learn/LearnContext'
 import { Companion3D, toSpecies, type CompanionState } from './Companion3D'
 import { companionText, pageFromPath } from './companionText'
+import { usePage } from './PageContext'
+import { playVoice, stopVoice, unlockAudioOnFirstGesture } from './voice'
 import { SPEECH_LANG, SpeechRecognitionCtor, type Recognition } from './speech'
 
 export type { CompanionState } from './Companion3D'
@@ -22,6 +24,10 @@ export interface SayOptions {
   heard?: string
   /** Keep the "write to me" box open under the bubble. */
   keepTyping?: boolean
+  /** A stored AI answer: spoken with the Gemini voice (browser voice as fallback). */
+  messageId?: string
+  /** Voice the first sentence separately so it starts sooner (uses 2 voice requests). */
+  voiceSplit?: boolean
 }
 /** Extra context a game can give the companion (read-only: it never changes the game). */
 export interface ChatContext {
@@ -52,7 +58,7 @@ const CompanionContext = createContext<CompanionApi>({
 export const useCompanion = () => useContext(CompanionContext)
 
 type Bubble =
-  | { kind: 'say'; text: string; tone?: 'hint' | 'cheer'; heard?: string; sticky?: boolean }
+  | { kind: 'say'; text: string; tone?: 'hint' | 'cheer'; heard?: string; sticky?: boolean; messageId?: string }
   | { kind: 'listen' }
   | { kind: 'thinking'; text: string; heard: string }
 
@@ -74,6 +80,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const emoji = avatarEmoji(exp.child.avatar_key)
   const page = pageFromPath(loc.pathname)
   const inGame = !!focus.gameKey
+  const pageCtx = usePage()
 
   const [state, setStateRaw] = useState<CompanionState>('idle')
   const [bubble, setBubble] = useState<Bubble | null>(null)
@@ -82,6 +89,9 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const [heard, setHeard] = useState('')
   const [typing, setTyping] = useState(false)
   const [writing, setWriting] = useState(false)
+  const [voiceLoading, setVoiceLoading] = useState(false)
+  const [voiceMissing, setVoiceMissing] = useState(false)
+  const sayToken = useRef(0) // cancels a pending voice when something newer happens
   const inputRef = useRef<HTMLInputElement>(null)
   const recCancelled = useRef(false)
   const [text, setText] = useState('')
@@ -184,6 +194,8 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     [place, setMode],
   )
 
+  useEffect(() => unlockAudioOnFirstGesture(), [])
+
   // ───────────── 3D engine + movement loop ─────────────
   useEffect(() => {
     const small = window.innerWidth < 640
@@ -240,17 +252,23 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   // ───────────── speaking ─────────────
   const say = useCallback(
     (message: string, o: SayOptions = {}) => {
+      const token = ++sayToken.current
+      stopVoice()
       walk.current = null
       clear('mode')
       clear('bubble')
       clear('speech')
       const st = o.state ?? 'talking'
       setTyping(!!o.keepTyping)
-      setBubble({ kind: 'say', text: message, tone: o.tone, sticky: o.sticky, heard: o.heard })
+      setVoiceLoading(false)
+      setVoiceMissing(false)
+      setBubble({ kind: 'say', text: message, tone: o.tone, sticky: o.sticky, heard: o.heard, messageId: o.messageId })
       setMode(st)
       const done = () => {
+        if (token !== sayToken.current) return
         clear('speech')
         engine.current?.setSpeaking(false)
+        engine.current?.setVoiceLevel(null)
         if (stateRef.current === st) setMode('idle')
         clear('bubble')
         // Never close the bubble while the child is writing in it.
@@ -263,17 +281,63 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       }
       const words = message.split(/\s+/).length
       const voiced = o.voice ?? exp.guide.auto_speak
-      const ok = voiced && speak(message, lang, { onStart: () => engine.current?.setSpeaking(true), onWord: () => engine.current?.syllable(), onEnd: done })
-      if (ok) {
+      const browserVoice = () => {
+        if (token !== sayToken.current) return
+        setVoiceLoading(false)
+        // Say so instead of moving the mouth in silence (e.g. no Arabic voice on this device).
+        if (voiced && soundOn() && !hasVoiceFor(lang)) setVoiceMissing(true)
+        const ok = voiced && speak(message, lang, { onStart: () => engine.current?.setSpeaking(true), onWord: () => engine.current?.syllable(), onEnd: done })
         engine.current?.setSpeaking(true)
-        timers.current.speech = window.setTimeout(done, words * 650 + 4000) // safety net if the voice never ends
-      } else {
-        // No voice (sound off / unsupported): still "talk" while the bubble is read.
-        engine.current?.setSpeaking(true)
-        timers.current.speech = window.setTimeout(done, Math.min(9000, Math.max(1400, words * 300)))
+        clear('speech')
+        // Voice: safety net if it never ends. No voice (sound off): still "talk" while the bubble is read.
+        timers.current.speech = window.setTimeout(done, ok ? words * 650 + 4000 : Math.min(9000, Math.max(1400, words * 300)))
       }
+
+      if (o.messageId && voiced && soundOn()) {
+        // The Gemini voice: explain with gestures while it is prepared, then talk with the real audio.
+        setVoiceLoading(true)
+        let settled = false
+        timers.current.speech = window.setTimeout(() => {
+          settled = true
+          browserVoice() // too slow: don't keep the child waiting
+        }, 12000)
+        // Split: both parts are requested at once, the first sentence plays while the rest is prepared.
+        // Otherwise one request for the whole answer (saves the free-tier voice quota).
+        const first = api.chatSpeech(childId, o.messageId, o.voiceSplit ? 0 : undefined)
+        const rest: Promise<ArrayBuffer | null> = o.voiceSplit ? api.chatSpeech(childId, o.messageId, 1).catch(() => null) : Promise.resolve(null)
+        const voiceEvents = (onEnd: () => void) => ({
+          onStart: () => engine.current?.setVoiceLevel(0),
+          onLevel: (l: number) => engine.current?.setVoiceLevel(l),
+          onEnd,
+        })
+        first
+          .then((wav) => {
+            if (settled || token !== sayToken.current) return
+            settled = true
+            clear('speech')
+            setVoiceLoading(false)
+            if (!wav) return done()
+            const playRest = () => {
+              if (token !== sayToken.current) return
+              rest.then((more) => {
+                if (token !== sayToken.current) return
+                if (!more) return done()
+                playVoice(more, voiceEvents(done)).then((ok) => !ok && done())
+              })
+            }
+            return playVoice(wav, voiceEvents(playRest)).then((ok) => {
+              if (!ok) browserVoice()
+            })
+          })
+          .catch(() => {
+            if (settled) return
+            settled = true
+            clear('speech')
+            browserVoice()
+          })
+      } else browserVoice()
     },
-    [exp.guide.auto_speak, lang, setMode],
+    [childId, exp.guide.auto_speak, lang, setMode],
   )
 
   const act = useCallback(
@@ -286,6 +350,9 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   )
 
   const hush = useCallback(() => {
+    sayToken.current++
+    stopVoice()
+    setVoiceLoading(false)
     stopSpeaking()
     recRef.current?.abort()
     recRef.current = null
@@ -308,6 +375,9 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       setMode('thinking')
       const f = focusRef.current
       const extra = chatCtx.current?.() ?? {}
+      // The page descriptor, only if it belongs to the page on screen (pageFromPath stays the fallback).
+      const { current: pd, history } = pageCtx.snapshot()
+      const desc = pd && pd.path === window.location.pathname ? pd : null
       try {
         const res = await api.chat({
           childId,
@@ -316,18 +386,28 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
           gameKey: extra.gameKey ?? f.gameKey,
           questionId: extra.questionId ?? f.questionId,
           gameState: extra.gameState,
-          page: pageRef.current,
+          page: desc?.key ?? pageRef.current,
+          pageContext: desc
+            ? {
+                label: desc.label,
+                visibleElements: desc.visibleElements,
+                availableActions: desc.availableActions,
+                navigation: desc.navigation.map((n) => n.label),
+                meta: desc.meta,
+                recentPages: history,
+              }
+            : undefined,
           voice: true,
         })
         setExchanges((n) => n + 1)
-        say(res.reply, { state: res.reply.length > 140 ? 'explaining' : 'talking', voice: true, sticky: true, heard: m, keepTyping: true })
+        say(res.reply, { state: res.reply.length > 140 ? 'explaining' : 'talking', voice: true, sticky: true, heard: m, keepTyping: true, messageId: res.message_id, voiceSplit: res.voice_split })
         return res.reply
       } catch (e) {
         say(e instanceof Error && e.message ? e.message : tx.error, { state: 'explaining', voice: false, sticky: true, keepTyping: true })
         return null
       }
     },
-    [childId, say, setMode, tx],
+    [childId, say, setMode, tx, pageCtx],
   )
 
   // ───────────── listening (tap the companion) ─────────────
@@ -336,6 +416,9 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       recRef.current.stop() // second tap = "I'm done talking"
       return
     }
+    sayToken.current++
+    stopVoice()
+    setVoiceLoading(false)
     stopSpeaking()
     engine.current?.setSpeaking(false)
     clear('speech')
@@ -488,6 +571,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     () => () => {
       recRef.current?.abort()
       stopSpeaking()
+      stopVoice()
       Object.values(timers.current).forEach((t) => window.clearTimeout(t))
     },
     [],
@@ -617,8 +701,14 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
                 </p>
               )}
               <p className="cb-text">{bubble.text}</p>
+              {voiceMissing && <p className="cb-voice-missing">{tx.no_voice_lang}</p>}
+              {voiceLoading && (
+                <p className="cb-voice-loading" aria-live="polite">
+                  🔊 <span>•••</span>
+                </p>
+              )}
               <div className="cb-actions">
-                <button type="button" onClick={() => say(bubble.text, { state: 'talking', voice: true, sticky: true })} aria-label="Read aloud">
+                <button type="button" onClick={() => say(bubble.text, { state: 'talking', voice: true, sticky: true, messageId: bubble.messageId })} aria-label="Read aloud">
                   🔊
                 </button>
                 {bubble.sticky && !typing && (

@@ -39,7 +39,6 @@ export default function ChildDetail() {
             </div>
           </div>
           <div className="btn-row">
-            <Link to={`/play/${d.id}`} className="btn primary">▶ Play</Link>
             <Link to={`/parent/children/${d.id}/edit`} className="btn ghost light">✏️ Edit</Link>
           </div>
         </header>

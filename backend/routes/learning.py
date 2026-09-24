@@ -3,12 +3,17 @@ so g.child is always a child of the logged-in parent."""
 from flask import Blueprint, g, jsonify
 
 from middleware import get_repo
-from middleware.auth import child_route, parent_locked_error, parent_unlocked
+from flask import make_response
+
+from middleware.auth import (child_owner_route, child_route, parent_child_route, parent_locked_error, parent_unlocked,
+                             set_child_access)
+from middleware.rate_limit import by_child, by_ip, rate_limit
+from services import pattern_service
 from services import children_service as cs, games_service as games, guide_service as guide, learning_service as ls
 from validators import json_body, require
 
 bp = Blueprint("learning", __name__, url_prefix="/api/children/<child_id>")
-CHILD_EDITABLE = {"selected_theme"}
+CHILD_EDITABLE = {"selected_theme", "language"}  # a child may switch their world and their language
 
 
 # ── Profile (used by onboarding steps) ──
@@ -22,7 +27,7 @@ def get_child(child_id):
 @child_route
 def patch_child(child_id):
     body = json_body()
-    # Children may switch their world themselves; any other profile change is a parent action.
+    # Children may switch their world and language themselves; any other profile change is a parent action.
     if set(body) - CHILD_EDITABLE and not parent_unlocked():
         raise parent_locked_error()
     patch = cs.validate_child_fields(body, child_id=g.child["id"])
@@ -133,3 +138,33 @@ def rewards(child_id):
 @child_route
 def progress(child_id):
     return jsonify(ls.progress_summary(g.child))
+
+
+# ── Secret picture pattern: each child opens only their own world ──
+def _enter(child):
+    res = make_response(jsonify(ok=True, child=cs.child_public(get_repo().get("mk_children", child["id"]))))
+    return set_child_access(res, g.parent["id"], child["id"], g.claims["jti"])
+
+
+@bp.post("/pattern")
+@parent_child_route  # created at the end of onboarding (parent mode) or re-created with a grown-up
+def set_pattern(child_id):
+    pattern_service.set_pattern(g.child, json_body().get("pattern"))
+    return _enter(g.child)
+
+
+@bp.delete("/pattern")
+@parent_child_route
+def reset_pattern(child_id):
+    pattern_service.clear_pattern(g.child)
+    return jsonify(ok=True)
+
+
+@bp.post("/enter")
+@child_owner_route
+@rate_limit(("pattern", by_ip), ("pattern", by_child))
+def enter(child_id):
+    """The child plays their secret pattern: the only way into their world without the parent's password."""
+    pattern_service.verify(g.child, json_body().get("pattern"))
+    return _enter(g.child)
+

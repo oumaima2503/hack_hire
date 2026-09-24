@@ -7,6 +7,7 @@ import { RequireAuth } from './components/RequireAuth'
 import { I18nProvider } from './i18n'
 import LearnLayout from './learn/LearnLayout'
 import AuthPage from './pages/AuthPage'
+import KidsCorner from './pages/KidsCorner'
 import Checkout from './pages/Checkout'
 import Confirmed from './pages/Confirmed'
 import Dashboard from './pages/Dashboard'
@@ -55,6 +56,7 @@ createRoot(document.getElementById('root')!).render(
 
               {/* Parent */}
               <Route path="/login" element={<AuthPage mode="login" />} />
+              <Route path="/kids" element={<Private><KidsCorner /></Private>} />
               <Route path="/register" element={<AuthPage mode="register" />} />
               <Route path="/parent" element={<ParentOnly><ParentDashboard /></ParentOnly>} />
               <Route path="/parent/children/:childId" element={<ParentOnly><ChildDetail /></ParentOnly>} />

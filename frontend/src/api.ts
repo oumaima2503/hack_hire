@@ -24,6 +24,8 @@ export interface Child {
   home_region: string | null
   learning_profile?: { skills: Partial<Record<Skill, SkillLevel>>; assessed_at?: string } | null
   total_points: number
+  /** Whether the child has a secret picture pattern (the pattern itself is never sent). */
+  has_pattern?: boolean
 }
 
 export type Skill = 'pattern_recognition' | 'sequencing' | 'visual_matching' | 'material_recognition'
@@ -333,6 +335,8 @@ export interface ProgressSummary {
 
 export interface ChildCard extends Child {
   theme: { key: string; name: string; emoji: string; primary: string }
+  progress_pct: number
+  region: string | null
   stats: Stats
   achievements: Achievement[]
   latest_rug: Rug | null
@@ -349,7 +353,11 @@ export interface ChildDetail extends ChildCard {
 
 export interface ChatReply {
   reply: string
-  source: 'gemini' | 'offline' | 'filtered'
+  source: 'gemini' | 'offline' | 'filtered' | 'guardrail'
+  /** Id of the stored answer: used to fetch its Gemini voice. */
+  message_id: string
+  /** Voice the first sentence separately (2 TTS requests, starts sooner). */
+  voice_split?: boolean
   guide: { name: string; emoji: string }
 }
 
@@ -363,6 +371,8 @@ export class ApiError extends Error {
 
 /** Fired when the API says parent mode is locked (password needed for parent-only content). */
 export const PARENT_LOCKED_EVENT = 'myrugy:parent-locked'
+/** Fired when a child's world is closed (no child pass): the child plays their secret pattern again. */
+export const CHILD_LOCKED_EVENT = 'myrugy:child-locked'
 
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch(`/api${path}`, {
@@ -375,6 +385,7 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
     if (data.code === 'parent_locked') window.dispatchEvent(new Event(PARENT_LOCKED_EVENT))
+    if (data.code === 'child_locked') window.dispatchEvent(new Event(CHILD_LOCKED_EVENT))
     throw new ApiError(data.error || `Request failed (${res.status})`, res.status, data.code)
   }
   return data as T
@@ -415,6 +426,10 @@ export const api = {
   childDetail: (id: string) => call<ChildDetail>('GET', `/parents/children/${id}`),
   editChild: (id: string, patch: Partial<Child>) => call<Child>('PUT', `/parents/children/${id}`, patch),
   deleteChild: (id: string) => call<void>('DELETE', `/parents/children/${id}`),
+  // secret picture pattern: each child opens only their own world
+  setPattern: (id: string, pattern: string[]) => call<{ ok: boolean; child: Child }>('POST', `${c(id)}/pattern`, { pattern }),
+  resetPattern: (id: string) => call<{ ok: boolean }>('DELETE', `${c(id)}/pattern`),
+  enterChild: (id: string, pattern: string[]) => call<{ ok: boolean; child: Child }>('POST', `${c(id)}/enter`, { pattern }),
 
   // child (onboarding + learning)
   updateChild: (id: string, patch: Partial<Child>) => call<Child>('PATCH', c(id), patch),
@@ -449,10 +464,31 @@ export const api = {
     page?: string
     /** The answer will be spoken aloud by the companion. */
     voice?: boolean
+    /** What the child can see and do on the current page (sanitised again on the server). */
+    pageContext?: {
+      label: string
+      visibleElements: string[]
+      availableActions: string[]
+      navigation: string[]
+      meta?: Record<string, string>
+      recentPages: string[]
+    }
   }) =>
     call<ChatReply>('POST', '/chat', b),
+  /** The companion's Gemini voice (WAV) for one of its stored answers. */
+  chatSpeech: async (childId: string, messageId: string, part?: 0 | 1): Promise<ArrayBuffer | null> => {
+    const res = await fetch('/api/chat/speech', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'fetch', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ childId, messageId, part }),
+    })
+    if (res.status === 204) return null // nothing left to say
+    if (!res.ok) throw new ApiError(`Voice unavailable (${res.status})`, res.status)
+    return res.arrayBuffer()
+  },
   chatHistory: (childId: string, lessonId?: string) =>
-    call<{ role: 'user' | 'assistant'; content: string }[]>(
+    call<{ id: string; role: 'user' | 'assistant'; content: string }[]>(
       'GET',
       `/chat/history?childId=${encodeURIComponent(childId)}${lessonId ? `&lessonId=${encodeURIComponent(lessonId)}` : ''}`,
     ),

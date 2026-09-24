@@ -1,4 +1,4 @@
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, Response, g, jsonify, request
 
 from middleware.auth import child_route
 from middleware.rate_limit import by_child, by_ip, rate_limit
@@ -22,10 +22,24 @@ def chat():
                                       game_key=_key(d.get("gameKey")), question_id=_key(d.get("questionId")),
                                       game_state=d.get("gameState"),
                                       page=d.get("page") if d.get("page") in chat_service.PAGES else None,
-                                      voice=d.get("voice") is True))
+                                      voice=d.get("voice") is True,
+                                      page_context=d.get("pageContext")))
 
 
 @bp.get("/history")
 @child_route
 def history():
     return jsonify(chat_service.history(g.child, _key(request.args.get("lessonId"))))
+
+
+@bp.post("/speech")
+@child_route
+@rate_limit(("chat_ip", by_ip), ("speech_minute", by_child))
+def speech():
+    """The companion's Gemini voice for one of its stored answers (WAV)."""
+    d = json_body()
+    part = d.get("part")
+    part = part if part in (0, 1) else None
+    wav = chat_service.speech(g.child, str(d.get("messageId") or ""), part)
+    return Response(wav, mimetype="audio/wav") if wav else ("", 204)
+

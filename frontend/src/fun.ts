@@ -118,6 +118,19 @@ export function speak(text: string, lang = 'en', events?: SpeechEvents) {
   }
 }
 
+/** False when the browser has voices but none for this language (e.g. no Arabic voice installed). */
+export function hasVoiceFor(lang = 'en') {
+  try {
+    if (!('speechSynthesis' in window)) return false
+    const voices = window.speechSynthesis.getVoices()
+    if (!voices.length) return true // voices not loaded yet: assume yes
+    const code = (VOICES[lang] ?? lang).slice(0, 2).toLowerCase()
+    return voices.some((v) => v.lang.toLowerCase().startsWith(code))
+  } catch {
+    return false
+  }
+}
+
 export function stopSpeaking() {
   try {
     window.speechSynthesis?.cancel()

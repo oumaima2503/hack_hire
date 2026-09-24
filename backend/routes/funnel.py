@@ -8,6 +8,7 @@ from flask import Blueprint, g, jsonify, request
 
 from content import BOX_PRICE
 from middleware import get_repo
+from services import gemini_client
 from middleware.auth import child_route, optional_parent, parent_child_route, parent_only_route
 from recommend import build_proposal
 from validators import clean_text, is_uuid, json_body, require
@@ -19,7 +20,7 @@ EVENTS = {
     "landing_viewed", "step_viewed", "onboarding_started", "consent_declined", "onboarding_completed",
     "result_viewed", "checkout_started", "order_confirmed", "rating_submitted",
 }
-MAX_STEP = 8
+MAX_STEP = 9
 # D1.2 thresholds [to confirm with My Rugy]
 THRESHOLDS = {"relevance_gap": 1.0, "completion_rate": 0.70, "min_testers": 5, "min_runs": 10}
 FUNNEL = [
@@ -34,6 +35,7 @@ FUNNEL = [
     ("step_viewed", 6, "Step 6 · language"),
     ("step_viewed", 7, "Step 7 · mini-challenges"),
     ("step_viewed", 8, "Step 8 · learning profile"),
+    ("step_viewed", 9, "Step 9 · secret pattern"),
     ("onboarding_completed", None, "Onboarding completed"),
     ("result_viewed", None, "Adventure proposal viewed"),
     ("checkout_started", None, "Checkout started"),
@@ -45,7 +47,7 @@ FUNNEL = [
 def health():
     # RAILWAY_GIT_COMMIT_SHA is set by Railway: shows exactly which commit is live.
     version = (os.getenv("RAILWAY_GIT_COMMIT_SHA") or "local")[:7]
-    return jsonify(ok=True, storage=get_repo().name, version=version)
+    return jsonify(ok=True, storage=get_repo().name, version=version, ai=gemini_client.status())
 
 
 @bp.post("/events")

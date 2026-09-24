@@ -120,7 +120,7 @@ export function ParentGate({ children }: { children: ReactNode }) {
               {kids.map((k, i) => (
                 <span key={k.id}>
                   {i > 0 && ' · '}
-                  <Link to={`/play/${k.id}`}>Back to {k.name}’s adventure</Link>
+                  <Link to={`/kids?child=${k.id}`}>Back to {k.name}’s adventure</Link>
                 </span>
               ))}
             </p>

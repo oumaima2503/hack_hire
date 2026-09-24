@@ -4,6 +4,9 @@
     @authorize_parent         → role 'parent' + consent on record
     @verify_child_ownership   → g.child, only if child.parent_id == g.parent.id
 
+    @require_child_access     → child data: this child's secret pattern was entered in this
+                                session (child pass), or the parent is in parent mode.
+                                Child A's pass never opens child B's data.
     @require_parent_unlock    → parent-only content: the password was re-entered recently
                                 (parent mode). Children playing on the same login can't
                                 open it, even by typing URLs or calling the API.
@@ -17,7 +20,8 @@ from flask import g, make_response, request
 
 import config
 from middleware import get_repo
-from services.auth_service import check_parent_unlock, decode_token, issue_parent_unlock
+from services.auth_service import (check_child_access, check_parent_unlock, decode_token, issue_child_access,
+                                   issue_parent_unlock)
 from validators import ApiError, is_uuid
 
 MUTATING = {"POST", "PUT", "PATCH", "DELETE"}
@@ -143,9 +147,40 @@ def parent_route(fn):
     return authenticate_parent(authorize_parent(fn))
 
 
-def child_route(fn):
-    """authenticate_parent + authorize_parent + verify_child_ownership."""
+def child_access_ok():
+    """True when the request carries this child's pass (secret pattern entered in this login session)."""
+    return check_child_access(request.cookies.get(config.CHILD_COOKIE), g.parent["id"], g.child["id"], g.claims["jti"])
+
+
+def set_child_access(res, parent_id, child_id, session_jti):
+    res.set_cookie(config.CHILD_COOKIE, issue_child_access(parent_id, child_id, session_jti), httponly=True,
+                   secure=config.COOKIE_SECURE, samesite="Strict", path="/api", max_age=config.JWT_TTL_HOURS * 3600)
+    return res
+
+
+def clear_child_access(res):
+    res.delete_cookie(config.CHILD_COOKIE, path="/api", samesite="Strict", secure=config.COOKIE_SECURE, httponly=True)
+    return res
+
+
+def require_child_access(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not (child_access_ok() or parent_unlocked()):
+            raise ApiError("Enter your secret pattern to open your world", 403, code="child_locked")
+        return fn(*args, **kwargs)
+    return wrapper
+
+
+def child_owner_route(fn):
+    """authenticate_parent + authorize_parent + verify_child_ownership (no child pass needed:
+    used to ENTER a child's world with the secret pattern)."""
     return authenticate_parent(authorize_parent(verify_child_ownership(fn)))
+
+
+def child_route(fn):
+    """Child data: ownership + (this child's pass or parent mode)."""
+    return authenticate_parent(authorize_parent(verify_child_ownership(require_child_access(fn))))
 
 
 def parent_only_route(fn):

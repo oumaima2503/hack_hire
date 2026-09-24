@@ -40,6 +40,11 @@ export function Layout({ children, wide }: { children: ReactNode; wide?: boolean
           <p className="tagline">{t('tagline')}</p>
         </div>
         <div className="topbar-right">
+          {parent && (
+            <Link to="/kids" className="pill-link kids-link">
+              🎮 {t('kc_nav')}
+            </Link>
+          )}
           <Link to={parent ? '/parent' : '/login'} className="pill-link">
             {parent ? `👨‍👩‍👧 ${t('nav_parent')}` : `🔑 ${t('nav_login')}`}
           </Link>

@@ -11,6 +11,8 @@ import { Storyboard } from '../../learn/Storyboard'
 import { TapCards } from '../../learn/TapCards'
 import { TalkingAvatar } from '../../components/TalkingAvatar'
 import { avatarEmoji } from '../../content'
+import { usePageDescriptor } from '../../companion/PageContext'
+import { pages } from '../../companion/pageDescriptors'
 
 type Step = 'watch' | 'practice' | 'discover' | 'quiz' | 'done'
 const STEP_INFO: Record<Step, { icon: string; label: string }> = {
@@ -40,6 +42,22 @@ export default function Lesson() {
   const [quizDone, setQuizDone] = useState(false)
   const [next, setNext] = useState<LessonSummary | null>(null)
   const lang = exp.child.language ?? 'en'
+  usePageDescriptor(
+    () =>
+      pages.lesson(
+        exp,
+        {
+          key,
+          title: lesson?.title ?? key,
+          position: lesson?.position ?? 0,
+          status: lesson?.status ?? 'new',
+          game: lesson?.game?.title ?? null,
+          regions: lesson?.regions.map((r) => r.short_name) ?? [],
+        },
+        step,
+      ),
+    [exp, lesson, step, key],
+  )
 
   useEffect(() => {
     setLesson(null)

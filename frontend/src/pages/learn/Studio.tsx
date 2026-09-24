@@ -4,12 +4,15 @@ import { api, type GameConfig, type Rug } from '../../api'
 import { RugView } from '../../components/RugView'
 import { RugStudio } from '../../games/RugStudio'
 import { useLearn } from '../../learn/LearnContext'
+import { usePageDescriptor } from '../../companion/PageContext'
+import { pages } from '../../companion/pageDescriptors'
 
 export default function Studio() {
   const { childId, exp } = useLearn()
   const [config, setConfig] = useState<GameConfig | null>(null)
   const [locked, setLocked] = useState(false)
   const [rugs, setRugs] = useState<Rug[]>([])
+  usePageDescriptor(() => pages.studio(exp, locked, rugs.length), [exp, locked, rugs.length])
 
   useEffect(() => {
     api.game(childId, 'create_rug').then(setConfig, () => setLocked(true))

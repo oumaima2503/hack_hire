@@ -8,6 +8,7 @@ interface Texts {
   or_write: string
   write_to_me: string
   talk_instead: string
+  no_voice_lang: string
   listening: string
   heard_nothing: string
   mic_blocked: string
@@ -28,6 +29,7 @@ const EN: Texts = {
   or_write: '…or write to me below ✍️',
   write_to_me: 'Write to me!',
   talk_instead: 'Talk instead',
+  no_voice_lang: '🔇 My voice is resting on this device, but you can read my answer!',
   listening: "I'm listening…",
   heard_nothing: "I didn't hear anything. Tap me and try again!",
   mic_blocked: 'I can’t hear you. Ask a grown-up to allow the microphone, or type here!',
@@ -55,6 +57,7 @@ const FR: Texts = {
   or_write: '…ou écris-moi en dessous ✍️',
   write_to_me: 'Écris-moi !',
   talk_instead: 'Parler plutôt',
+  no_voice_lang: '🔇 Ma voix se repose sur cet appareil, mais tu peux lire ma réponse !',
   listening: "Je t'écoute…",
   heard_nothing: "Je n'ai rien entendu. Touche-moi et réessaie !",
   mic_blocked: "Je ne t'entends pas. Demande à un adulte d'autoriser le micro, ou écris ici !",
@@ -82,6 +85,7 @@ const AR: Texts = {
   or_write: '…أو اكتب لي في الأسفل ✍️',
   write_to_me: 'اكتب لي!',
   talk_instead: 'تحدث بدلاً من ذلك',
+  no_voice_lang: '🔇 صوتي يستريح على هذا الجهاز، لكن يمكنك قراءة جوابي!',
   listening: 'أنا أستمع…',
   heard_nothing: 'لم أسمع شيئاً. المسني وحاول مرة أخرى!',
   mic_blocked: 'لا أستطيع سماعك. اطلب من شخص بالغ السماح بالميكروفون، أو اكتب هنا!',

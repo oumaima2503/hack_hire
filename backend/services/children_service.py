@@ -2,7 +2,7 @@
 from content import AGE_BANDS, AVATARS, INTERESTS, LANGUAGES
 from learning_content import COLORS, LEARNING_STYLES, REGION_ORDER, RUG_STYLES, THEMES
 from middleware import get_repo
-from services import games_service, learning_service as ls
+from services import games_service, learning_service as ls, regions_service as rs
 from services.guide_service import learning_profile, validate_learning_profile
 from validators import clean_text, require
 
@@ -67,7 +67,8 @@ def validate_child_fields(d, child_id=None):
 
 
 def child_public(child):
-    return {k: child.get(k) for k in PUBLIC_FIELDS}
+    # The secret pattern is never returned (not even its hash): only whether one exists.
+    return {**{k: child.get(k) for k in PUBLIC_FIELDS}, "has_pattern": bool(child.get("pattern_hash"))}
 
 
 def create_child(parent_id, data):
@@ -92,8 +93,11 @@ def child_card(child):
     rugs = games_service.list_rugs(child["id"])
     ledger = repo.select("mk_points_ledger", child_id=child["id"])
     theme = ls.theme_for(child)
+    current = (rs.journey(child).get("current") or [None])[0]
     return {
         **child_public(child),
+        "progress_pct": round(100 * s["lessons_completed"] / max(1, s["lessons_total"])),
+        "region": current["name"] if current else None,
         "theme": {"key": theme["key"], "name": theme["name"], "emoji": theme["emoji"], "primary": theme["colors"]["primary"]},
         "stats": s,
         "achievements": [ls.public_achievement(a) for a in repo.select("mk_achievements") if a["id"] in earned],

@@ -4,6 +4,8 @@ import { RugView } from '../../components/RugView'
 import { REASON_LABELS, useLearn } from '../../learn/LearnContext'
 import { RegionPassport } from '../../learn/RegionMap'
 import { LearningProfileCard } from '../../components/LearningProfileCard'
+import { usePageDescriptor } from '../../companion/PageContext'
+import { pages } from '../../companion/pageDescriptors'
 
 export function StatTiles({ s, pointEmoji = '⭐', pointsLabel = 'points', levelLabel = 'Level' }: {
   s: ProgressSummary['stats']
@@ -37,6 +39,7 @@ export function StatTiles({ s, pointEmoji = '⭐', pointsLabel = 'points', level
 
 export default function Progress() {
   const { childId, exp } = useLearn()
+  usePageDescriptor(() => pages.progress(exp), [exp])
   const [data, setData] = useState<ProgressSummary | null>(null)
   const [rugs, setRugs] = useState<Rug[]>([])
   const v = exp.theme.vocab

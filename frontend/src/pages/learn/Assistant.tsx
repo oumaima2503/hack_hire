@@ -3,8 +3,11 @@ import { api } from '../../api'
 import { useCompanion } from '../../companion/Companion'
 import { companionText } from '../../companion/companionText'
 import { useLearn } from '../../learn/LearnContext'
+import { usePageDescriptor } from '../../companion/PageContext'
+import { pages } from '../../companion/pageDescriptors'
 
 interface Msg {
+  id?: string
   role: 'user' | 'assistant'
   content: string
 }
@@ -12,6 +15,7 @@ interface Msg {
 /** Conversation corner: talk to the companion (voice first, typing as a fallback) and see what you said. */
 export default function Assistant() {
   const { childId, exp } = useLearn()
+  usePageDescriptor(() => pages.assistant(exp), [exp])
   const companion = useCompanion()
   const tx = companionText(exp.child.language)
   const [messages, setMessages] = useState<Msg[]>([])
@@ -80,7 +84,7 @@ export default function Assistant() {
             <div key={i} className={`chat-msg ${m.role}`}>
               {m.content}
               {m.role === 'assistant' && (
-                <button className="speak-btn" onClick={() => companion.say(m.content, { state: 'explaining', voice: true, sticky: true })} aria-label="Say it again">
+                <button className="speak-btn" onClick={() => companion.say(m.content, { state: 'explaining', voice: true, sticky: true, messageId: m.id })} aria-label="Say it again">
                   🔊
                 </button>
               )}
